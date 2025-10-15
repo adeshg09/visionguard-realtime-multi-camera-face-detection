@@ -1,0 +1,16 @@
+import dotenv from "dotenv";
+
+dotenv.config();
+
+export const envConfig = {
+  DATABASE_URL: process.env.DATABASE_URL,
+
+  ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
+  REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
+
+  BACKEND_SERVICE_PORT: Number(process.env.BACKEND_SERVICE_PORT),
+  BACKEND_SERVICE_WEBSOCKET_PORT: process.env.BACKEND_SERVICE_WEBSOCKET_PORT,
+
+  FRONTEND_SERVICE_URL: process.env.FRONTEND_SERVICE_URL,
+  WORKER_SERVICE_URL: process.env.WORKER_SERVICE_URL,
+};

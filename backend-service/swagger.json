@@ -1,0 +1,55 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VisionGuard API",
+    "version": "1.0.0",
+    "description": "API documentation for VisionGuard backend."
+  },
+  "servers": [
+    {
+      "url": "http://visionguard-backend:3000/api/v1",
+      "description": "Local server"
+    }
+  ],
+  "tags": [{ "name": "Health", "description": "Health check endpoints" }],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Returns API health",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "API is healthy.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "service": { "type": "string" }
+        }
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }]
+}
