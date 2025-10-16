@@ -7,11 +7,18 @@
   },
   "servers": [
     {
-      "url": "http://visionguard-backend:3000/api/v1",
-      "description": "Local server"
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local development server"
+    },
+    {
+      "url": "/api/v1",
+      "description": "Relative path (works in Docker)"
     }
   ],
-  "tags": [{ "name": "Health", "description": "Health check endpoints" }],
+  "tags": [
+    { "name": "Health", "description": "Health check endpoints" },
+    { "name": "Auth", "description": "Authentication endpoints" }
+  ],
   "paths": {
     "/health": {
       "get": {
@@ -24,10 +31,54 @@
             "description": "API is healthy.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+                "schema": { "$ref": "#/components/schemas/healthResponse" }
               }
             }
           }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login user",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/loginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/loginResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/get-profile": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get current user profile information",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User information.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/profileResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
         }
       }
     }
@@ -41,12 +92,42 @@
       }
     },
     "schemas": {
-      "HealthResponse": {
+      "healthResponse": {
         "type": "object",
         "properties": {
           "status": { "type": "string" },
           "timestamp": { "type": "string", "format": "date-time" },
           "service": { "type": "string" }
+        }
+      },
+      "loginRequest": {
+        "type": "object",
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        },
+        "required": ["username", "password"]
+      },
+      "loginResponse": {
+        "type": "object",
+        "properties": {
+          "user": { "$ref": "#/components/schemas/UserResponse" },
+          "token": {
+            "type": "object",
+            "properties": {
+              "accessToken": { "type": "string" },
+              "refreshToken": { "type": "string" }
+            }
+          }
+        }
+      },
+      "profileResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "username": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string" }
         }
       }
     }

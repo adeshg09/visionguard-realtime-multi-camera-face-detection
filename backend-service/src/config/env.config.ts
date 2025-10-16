@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const envConfig = {
+  NODE_ENV: process.env.NODE_ENV,
+
   DATABASE_URL: process.env.DATABASE_URL,
 
   ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,

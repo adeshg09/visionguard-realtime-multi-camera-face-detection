@@ -20,3 +20,26 @@ export const RESPONSE_MESSAGES = {
   VALIDATION_ERROR: "Validation Error!",
   RESOURCE_EXISTS: "Resource already exists!",
 };
+
+export const TOKEN_EXPIRY = {
+  ACCESS: "1d",
+  REFRESH: "7d",
+  REMEMBER_ME: "30d",
+};
+
+export const USER_ROLES = {
+  ADMIN: "ADMIN",
+  VIEWER: "VIEWER",
+  OPERATOR: "OPERATOR",
+} as const;
+
+export const RESPONSE_SUCCESS_MESSAGES = {
+  LOGIN_SUCCESS: "Login successful",
+};
+
+export const RESPONSE_ERROR_MESSAGES = {
+  INVALID_CREDENTIALS: "Invalid credentials",
+  LOGIN_FAILED: "Login failed",
+  USER_NOT_FOUND: "User not found",
+  USER_INFO_ERROR: "Unable to fetch user information",
+};

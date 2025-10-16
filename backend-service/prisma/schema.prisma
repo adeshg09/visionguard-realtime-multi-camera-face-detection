@@ -1,15 +1,87 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN // Can manage everything
+  VIEWER // Read-only access
+  OPERATOR // Can manage cameras but not users
+}
+
+model User {
+  id String @id @default(cuid())
+
+  email    String @unique
+  password String
+  username String @unique
+
+  role UserRole @default(ADMIN)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  cameras Camera[]
+
+  @@index([username])
+  @@index([email])
+  @@map("users")
+}
+
+model Camera {
+  id String @id @default(cuid())
+
+  name        String
+  rtspUrl     String  @unique
+  location    String?
+  description String?
+  resolution  String?
+  fps         Int     @default(30)
+
+  isActive Boolean @default(true) // Whether the camera is active in the system
+  isOnline Boolean @default(false) // Real-time online/streaming status
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  alerts Alert[]
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("cameras")
+}
+
+model Alert {
+  id String @id @default(cuid())
+
+  faceCount  Int   @default(1)
+  confidence Float @default(0.85)
+
+  snapshotUrl String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  cameraId String
+
+  // Relations
+  camera Camera @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+
+  // Indexes for optimization
+  @@index([cameraId])
+  @@index([createdAt])
+  @@index([cameraId, createdAt])
+  @@map("alerts")
 }

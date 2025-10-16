@@ -1,4 +1,3 @@
-import { envConfig } from "@/config/env.config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -8,10 +7,10 @@ export const createServer = (): Hono => {
 
   // Global middlewares
   app.use(
-    "*",
     cors({
-      origin: envConfig.FRONTEND_SERVICE_URL!,
-      credentials: true,
+      origin: "*",
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+      allowHeaders: ["Content-Type", "Authorization"],
     })
   );
 

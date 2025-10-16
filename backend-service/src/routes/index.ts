@@ -1,8 +1,10 @@
 import { Hono } from "hono";
-import { RESPONSE_MESSAGES, STATUS_CODES } from "../constants";
-import { successResponse } from "../utils/response";
+import { PrismaClient } from "@prisma/client";
+import { RESPONSE_MESSAGES, STATUS_CODES } from "@/constants/index.js";
+import { successResponse } from "@/utils/response.js";
+import { createAuthRoutes } from "./auth.route.js";
 
-export const createRoutes = () => {
+export const createRoutes = (prisma: PrismaClient) => {
   const api = new Hono();
 
   // Health Check
@@ -21,6 +23,9 @@ export const createRoutes = () => {
       }
     );
   });
+
+  // API routes
+  api.route("/auth", createAuthRoutes(prisma));
 
   return api;
 };
