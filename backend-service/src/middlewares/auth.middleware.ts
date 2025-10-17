@@ -7,6 +7,17 @@ import { verifyToken } from "@/utils/tokens.js";
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   try {
+    // Worker authentication
+    const backendWorkerApiKey = c.req.header("X-Backend-Worker-API-Key");
+    if (
+      backendWorkerApiKey &&
+      backendWorkerApiKey === envConfig.BACKEND_WORKER_API_KEY
+    ) {
+      c.set("worker", true);
+      return await next();
+    }
+
+    // User authentication
     const authHeader = c.req.header("Authorization");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {

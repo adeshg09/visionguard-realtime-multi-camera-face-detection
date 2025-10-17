@@ -17,7 +17,8 @@
   ],
   "tags": [
     { "name": "Health", "description": "Health check endpoints" },
-    { "name": "Auth", "description": "Authentication endpoints" }
+    { "name": "Auth", "description": "Authentication endpoints" },
+    { "name": "Camera", "description": "Camera management endpoints" }
   ],
   "paths": {
     "/health": {
@@ -81,6 +82,197 @@
           "401": { "description": "Unauthorized" }
         }
       }
+    },
+    "/cameras/create-camera": {
+      "post": {
+        "tags": ["Camera"],
+        "summary": "Create camera",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/createCameraRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Camera created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/cameraResponse" }
+              }
+            }
+          },
+          "400": { "description": "Bad request" }
+        }
+      }
+    },
+    "/cameras/get-cameras": {
+      "get": {
+        "tags": ["Camera"],
+        "summary": "Get all cameras (paginated)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 10 }
+          },
+          { "name": "sortBy", "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of cameras.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cameras": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/cameraResponse" }
+                    },
+                    "pagination": { "$ref": "#/components/schemas/pagination" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cameras/get-camera-by-id/{id}": {
+      "get": {
+        "tags": ["Camera"],
+        "summary": "Get camera by ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Camera details.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/cameraResponse" }
+              }
+            }
+          },
+          "404": { "description": "Camera not found" }
+        }
+      }
+    },
+    "/cameras/update-camera/{id}": {
+      "put": {
+        "tags": ["Camera"],
+        "summary": "Update camera",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/updateCameraRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Camera updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/cameraResponse" }
+              }
+            }
+          },
+          "404": { "description": "Camera not found" }
+        }
+      }
+    },
+    "/cameras/delete-camera/{id}": {
+      "delete": {
+        "tags": ["Camera"],
+        "summary": "Delete camera",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Camera deleted." },
+          "404": { "description": "Camera not found" }
+        }
+      }
+    },
+    "/cameras/start-stream/{id}": {
+      "post": {
+        "tags": ["Camera"],
+        "summary": "Start camera stream",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Stream started." },
+          "404": { "description": "Camera not found" }
+        }
+      }
+    },
+    "/cameras/stop-stream/{id}": {
+      "post": {
+        "tags": ["Camera"],
+        "summary": "Stop camera stream",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Stream stopped." },
+          "404": { "description": "Camera not found" }
+        }
+      }
     }
   },
   "components": {
@@ -128,6 +320,55 @@
           "username": { "type": "string" },
           "email": { "type": "string" },
           "role": { "type": "string" }
+        }
+      },
+      "createCameraRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "rtspUrl": { "type": "string" },
+          "location": { "type": "string" },
+          "description": { "type": "string" },
+          "resolution": { "type": "string" },
+          "fps": { "type": "integer" }
+        },
+        "required": ["name", "rtspUrl"]
+      },
+      "updateCameraRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "rtspUrl": { "type": "string" },
+          "location": { "type": "string" },
+          "description": { "type": "string" },
+          "resolution": { "type": "string" },
+          "fps": { "type": "integer" },
+          "isActive": { "type": "boolean" }
+        }
+      },
+      "cameraResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "rtspUrl": { "type": "string" },
+          "location": { "type": "string" },
+          "description": { "type": "string" },
+          "isActive": { "type": "boolean" },
+          "isOnline": { "type": "boolean" },
+          "resolution": { "type": "string" },
+          "fps": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "pagination": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "totalRecords": { "type": "integer" },
+          "totalPages": { "type": "integer" }
         }
       }
     }

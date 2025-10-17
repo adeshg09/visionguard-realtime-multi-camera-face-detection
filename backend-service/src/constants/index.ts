@@ -35,6 +35,13 @@ export const USER_ROLES = {
 
 export const RESPONSE_SUCCESS_MESSAGES = {
   LOGIN_SUCCESS: "Login successful",
+  CAMERA_CREATED: "Camera created successfully",
+  CAMERA_UPDATED: "Camera updated successfully",
+  CAMERA_DELETED: "Camera deleted successfully",
+  CAMERAS_RETRIEVED: "Cameras retrieved successfully",
+  CAMERA_RETRIEVED: "Camera retrieved successfully",
+  STREAM_STARTED: "Stream started successfully",
+  STREAM_STOPPED: "Stream stopped successfully",
 };
 
 export const RESPONSE_ERROR_MESSAGES = {
@@ -42,4 +49,12 @@ export const RESPONSE_ERROR_MESSAGES = {
   LOGIN_FAILED: "Login failed",
   USER_NOT_FOUND: "User not found",
   USER_INFO_ERROR: "Unable to fetch user information",
+  CAMERA_CREATE_FAILED: "Failed to create camera",
+  CAMERA_UPDATE_FAILED: "Failed to update camera",
+  CAMERA_DELETE_FAILED: "Failed to delete camera",
+  CAMERAS_RETRIEVE_FAILED: "Failed to retrieve cameras",
+  CAMERA_RETRIEVE_FAILED: "Failed to retrieve camera",
+  CAMERA_NOT_FOUND: "Camera not found",
+  STREAM_START_FAILED: "Failed to start stream",
+  STREAM_STOP_FAILED: "Failed to stop stream",
 };
