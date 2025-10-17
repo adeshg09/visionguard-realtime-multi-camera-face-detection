@@ -1,6 +1,10 @@
 /* Imports */
 import React, { type JSX } from "react";
+
+/* Relative Imports */
 import { Loader2 } from "lucide-react";
+
+/* Local Imports */
 import { cn } from "@/lib/utils";
 
 // ----------------------------------------------------------------------
