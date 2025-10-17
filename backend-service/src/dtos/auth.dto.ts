@@ -23,7 +23,7 @@ export interface LoginResponse {
     email?: string | null;
     role: string;
   };
-  token: Tokens;
+  tokens: Tokens;
 }
 
 export interface GetProfileResponse {
@@ -31,7 +31,7 @@ export interface GetProfileResponse {
   username: string;
   email: string;
   role: UserRole;
-  isActive: boolean;
+  // isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

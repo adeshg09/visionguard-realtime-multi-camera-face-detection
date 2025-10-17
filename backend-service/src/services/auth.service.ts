@@ -41,7 +41,7 @@ export const createAuthService = (prisma: PrismaClient) => {
           email: user.email,
           role: user.role,
         },
-        token: tokens,
+        tokens: tokens,
       };
     } catch (error) {
       logger.error("Login error:", error);
@@ -57,7 +57,7 @@ export const createAuthService = (prisma: PrismaClient) => {
         username: true,
         email: true,
         role: true,
-        isActive: true,
+        // isActive: true,
         createdAt: true,
         updatedAt: true,
       },

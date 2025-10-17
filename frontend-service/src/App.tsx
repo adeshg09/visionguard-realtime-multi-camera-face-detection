@@ -12,6 +12,7 @@ import { queryClient } from "./lib/queryClient";
 import ThemeModeSetting from "./components/themeModeSetting";
 import { SessionProvider } from "./context/sessionContext";
 import Routing from "./routes";
+import { Toaster } from "@/components/ui/sonner";
 
 // ----------------------------------------------------------------------
 
@@ -31,6 +32,7 @@ const App: React.FC = (): JSX.Element => {
             <Router>
               <Routing />
             </Router>
+            <Toaster />
           </QueryClientProvider>
         </SessionProvider>
       </ThemeContextProvider>

@@ -10,7 +10,7 @@ export const useAuth = (): any => {
         password,
         rememberMe: rememberMe,
       });
-
+      console.log("login response", response);
       if (response.status.response_code === 200) {
         return response;
       }

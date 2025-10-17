@@ -25,7 +25,7 @@ export interface IAccount {
 export interface ISessionState {
   isAuthenticated: boolean;
   authToken: string | null;
-  user: IAccount | null;
+  user: any | null;
   isPageLoaded: boolean | null;
   LoginUser: (token: string, rememberMe: boolean) => void;
   LogoutUser: () => void;

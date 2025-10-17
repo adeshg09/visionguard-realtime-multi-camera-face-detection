@@ -9,6 +9,7 @@ import { typography } from "@/theme/typography";
 import AuthPage from "@/components/page/authPage";
 import SessionContext from "@/context/sessionContext";
 import LoginForm from "./components/loginForm";
+import AppLogo from "@/assets/images/appLogo.png";
 
 // ----------------------------------------------------------------------
 
@@ -30,7 +31,7 @@ const LogIn = (): JSX.Element => {
    * @returns {void}
    */
   const handleLogIn = (token: string, rememberMe: boolean): void => {
-    console.log("token", token);
+    console.log("token", token, "rememberMe", rememberMe);
     LoginUser(token, rememberMe);
   };
 
@@ -38,6 +39,7 @@ const LogIn = (): JSX.Element => {
     <AuthPage title="Sign In">
       <div className="flex flex-col items-start justify-center gap-6">
         <div className="flex flex-col items-start gap-2">
+          <img src={AppLogo} alt="App Logo" className="h-16" />
           <h1 className={typography.semibold24}>Welcome to VisonGuard</h1>
           <p
             className={clsx(

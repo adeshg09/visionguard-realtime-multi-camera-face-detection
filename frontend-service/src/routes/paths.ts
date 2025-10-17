@@ -31,8 +31,20 @@ export const PAGE_ADMIN_DASHBOARD = {
     relativePath: "account",
     absolutePath: `/${ROOT_ADMIN_DASHBOARD}/account`,
   },
+  analytics: {
+    relativePath: "analytics",
+    absolutePath: `/${ROOT_ADMIN_DASHBOARD}/analytics`,
+  },
   cameras: {
     relativePath: "cameras",
     absolutePath: `/${ROOT_ADMIN_DASHBOARD}/cameras`,
+    create: {
+      relativePath: "create",
+      absolutePath: `/${ROOT_ADMIN_DASHBOARD}/cameras/create`,
+    },
+    edit: {
+      relativePath: "edit/:id",
+      absolutePath: `/${ROOT_ADMIN_DASHBOARD}/cameras/edit/:id`,
+    },
   },
 };

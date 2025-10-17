@@ -15,6 +15,8 @@ const axiosConfig: AxiosInstance = axios.create({
   },
 });
 
+console.log("Axios baseURL configured as:", envConfig.apiBaseUrl);
+
 // Request Interceptor
 axiosConfig.interceptors.request.use(
   (config) => {

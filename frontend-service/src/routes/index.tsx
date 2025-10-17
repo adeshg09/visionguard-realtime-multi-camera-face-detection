@@ -6,6 +6,7 @@ import { useRoutes } from "react-router-dom";
 import { RootRoutes, NotFoundRoutes } from "./auth";
 import SessionContext from "@/context/sessionContext";
 import { SpinnerLoader } from "@/components/loader/inlineLoader";
+import getAdminDashboardRoutes from "./admin-dashboard";
 
 // ----------------------------------------------------------------------
 
@@ -16,8 +17,12 @@ import { SpinnerLoader } from "@/components/loader/inlineLoader";
  */
 
 const Routing: React.FC = (): JSX.Element => {
-  //   const { user } = useContext(SessionContext);
-  const dashboardRoutes: Array<object> = [];
+  const { user } = useContext(SessionContext);
+  let dashboardRoutes: Array<object> = [];
+
+  if (user) {
+    dashboardRoutes = getAdminDashboardRoutes();
+  }
 
   const routes = [...RootRoutes, ...dashboardRoutes, ...NotFoundRoutes];
 

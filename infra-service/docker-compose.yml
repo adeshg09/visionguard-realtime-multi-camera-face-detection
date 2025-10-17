@@ -1,35 +1,4 @@
 services:
-  # PostgreSQL Database
-  # postgres:
-  #   image: postgres:15-alpine
-  #   container_name: visionguard-postgres
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}"
-  #   environment:
-  #     POSTGRES_DB: ${POSTGRES_DB:-visionguard_db}
-  #     POSTGRES_USER: ${POSTGRES_USER:-visionguard_user}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-visionguard_password}
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   networks:
-  #     - ${VISIONGUARD_NETWORK_NAME}
-
-  # PGAdmin for visual DB management
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   container_name: visionguard-pgadmin
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${PGADMIN_PORT:-3002}:80"
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-  #   depends_on:
-  #     - postgres
-  #   networks:
-  #     - ${VISIONGUARD_NETWORK_NAME}
-
   # MediaMTX - Media Server
   # mediamtx:
   #   image: bluenviron/mediamtx:latest
@@ -88,7 +57,7 @@ services:
     ports:
       - "${FRONTEND_SERVICE_PORT:-5173}:${FRONTEND_SERVICE_PORT:-5173}"
     env_file:
-      - ./env/backend.env
+      - ./env/frontend.env
     networks:
       - ${VISIONGUARD_NETWORK_NAME}
 

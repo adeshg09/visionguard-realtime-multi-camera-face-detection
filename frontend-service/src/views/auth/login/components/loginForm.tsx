@@ -21,13 +21,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { typography } from "@/theme/typography";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 // ----------------------------------------------------------------------
 
 /* Interface */
 export interface LogInFormProps {
   onSubmitSuccess: (token: string, rememberMe: boolean) => void;
-  isLoading?: boolean;
 }
 
 // ----------------------------------------------------------------------
@@ -39,10 +39,8 @@ export interface LogInFormProps {
  * @param {function} onSubmitSuccess - callback function on successful submission of log in form
  * @returns {JSX.Element}
  */
-const LogInForm = ({
-  onSubmitSuccess,
-  isLoading = false,
-}: LogInFormProps): JSX.Element => {
+const LogInForm = ({ onSubmitSuccess }: LogInFormProps): JSX.Element => {
+  /* Hooks */
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(LoginFormSchema),
     defaultValues: {
@@ -51,10 +49,22 @@ const LogInForm = ({
       chkRememberMe: false,
     },
   });
+  const { loginMutation } = useAuth();
 
   /* Functions */
   const handleFormSubmit = async (values: LoginFormValues): Promise<void> => {
-    onSubmitSuccess(values.txtUsername, values.chkRememberMe);
+    const response = await loginMutation.mutateAsync({
+      username: values.txtUsername,
+      password: values.txtPassword,
+      rememberMe: values.chkRememberMe,
+    });
+    console.log("res is", response);
+    if (response?.data?.tokens?.accessToken) {
+      onSubmitSuccess(
+        response?.data?.tokens?.accessToken,
+        values.chkRememberMe
+      );
+    }
   };
 
   /* Output */
@@ -130,9 +140,13 @@ const LogInForm = ({
           <Button
             type="submit"
             className="w-full rounded-[10px]"
-            disabled={isLoading}
+            disabled={loginMutation.isPending}
           >
-            {isLoading ? <ButtonLoader text="Logging in..." /> : "Log In"}
+            {loginMutation.isPending ? (
+              <ButtonLoader text="Logging in..." />
+            ) : (
+              "Log In"
+            )}
           </Button>
         </form>
       </Form>
