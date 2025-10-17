@@ -1,9 +1,6 @@
 /* Imports */
 import type { JSX } from "react";
 
-/* Local Imports */
-import "./App.css";
-
 // ----------------------------------------------------------------------
 
 /**
