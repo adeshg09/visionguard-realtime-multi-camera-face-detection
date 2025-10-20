@@ -1,20 +1,34 @@
 services:
   # MediaMTX - Media Server
-  # mediamtx:
-  #   image: bluenviron/mediamtx:latest
-  #   container_name: visionguard-mediamtx
-  #   network_mode: host
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8554:8554" # RTSP
-  #     - "1935:1935" # RTMP
-  #     - "8888:8888" # HLS
-  #     - "8889:8889" # WebRTC
-  #     - "9997:9997" # API
-  #   volumes:
-  #     - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
-  #   networks:
-  #     - visionguard-network
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: visionguard-mediamtx
+    restart: unless-stopped
+    ports:
+      # RTSP
+      - "8554:8554"
+      - "8000:8000/udp"
+      - "8001:8001/udp"
+      # RTMP
+      - "1935:1935"
+      # HLS
+      - "8888:8888"
+      # WebRTC
+      - "8889:8889"
+      # API
+      - "9997:9997"
+      # WebRTC ICE
+      - "8189:8189/udp"
+      - "8189:8189"
+      # SRT
+      - "8890:8890/udp"
+    environment:
+      MTX_WEBRTCADDITIONALHOSTS: "127.0.0.1"
+      MTX_PROTOCOLS: "tcp"
+    volumes:
+      - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
+    networks:
+      - ${VISIONGUARD_NETWORK_NAME}
 
   # Backend Service
   backend:
@@ -31,21 +45,23 @@ services:
       - ${VISIONGUARD_NETWORK_NAME}
 
   # Worker Service
-  # worker:
-  #   build:
-  #     context: ../worker-service
-  #     dockerfile: Dockerfile
-  #   container_name: visionguard-worker
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${WORKER_SERVICE_PORT:-5000}:${WORKER_SERVICE_PORT:-5000}"
-  #   environment:
-  #     WORKER_SERVICE_PORT: ${WORKER_SERVICE_PORT:-5000}
-  #     GIN_MODE: ${GIN_MODE:-release}
-  #     LOG_LEVEL: ${LOG_LEVEL:-info}
-  #     BACKEND_SERVICE_URL: ${BACKEND_SERVICE_URL}
-  #   networks:
-  #     - visionguard-network
+  worker:
+    build:
+      context: ../worker-service
+      dockerfile: Dockerfile
+    container_name: visionguard-worker
+    restart: unless-stopped
+    ports:
+      - "${WORKER_SERVICE_PORT:-5000}:${WORKER_SERVICE_PORT:-5000}"
+    depends_on:
+      - mediamtx
+      - backend
+    env_file:
+      - ./env/worker.env
+    volumes:
+      - worker_snapshots:/tmp/visionguard/snapshots
+    networks:
+      - ${VISIONGUARD_NETWORK_NAME}
 
   # Frontend Service
   frontend:
@@ -66,7 +82,7 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
-    driver: local
   mediamtx_data:
+    driver: local
+  worker_snapshots:
     driver: local

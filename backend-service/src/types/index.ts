@@ -21,3 +21,9 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+export interface WorkerRequestOptions {
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  data?: any;
+  headers?: Record<string, string>;
+}

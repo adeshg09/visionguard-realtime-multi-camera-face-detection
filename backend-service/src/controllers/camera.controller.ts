@@ -129,10 +129,7 @@ export const createCameraController = (prisma: PrismaClient) => {
       const user = c.get("user");
       const cameraId = c.req.param("id");
 
-      await workerService.stopStream(cameraId, {
-        userId: user.id,
-        role: user.role,
-      });
+      await workerService.stopStream(cameraId);
       await cameraService.deleteCamera(cameraId, user.id);
 
       return successResponse(
@@ -161,25 +158,22 @@ export const createCameraController = (prisma: PrismaClient) => {
         user.id
       )) as CameraResponse;
 
-      const result: any = await workerService.startStream(camera, {
-        userId: user.id,
-        role: user.role,
-      });
+      const result: any = await workerService.startStream(camera);
+      console.log("backend res is", result);
 
-      if (result.success) {
+      if (result.success === true) {
         return successResponse(
           c,
           STATUS_CODES.OK,
           RESPONSE_SUCCESS_MESSAGES.STREAM_STARTED,
-          "Stream started successfully",
-          result
-        );
-      } else {
-        return errorResponse(
-          c,
-          STATUS_CODES.BAD_REQUEST,
-          RESPONSE_ERROR_MESSAGES.STREAM_START_FAILED,
-          result
+          result.message,
+          {
+            cameraId: result.cameraId,
+            rtspUrl: result.rtspUrl,
+            webrtcUrl: result.webrtcUrl,
+            hlsUrl: result.hlsUrl,
+            rtmpUrl: result.rtmpUrl,
+          }
         );
       }
     } catch (error) {
@@ -202,10 +196,7 @@ export const createCameraController = (prisma: PrismaClient) => {
         throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
       }
 
-      const result = await workerService.stopStream(cameraId, {
-        userId: user.id,
-        role: user.role,
-      });
+      const result = await workerService.stopStream(cameraId);
       await cameraService.updateCameraStatus(cameraId, false, false);
 
       return successResponse(
