@@ -56,6 +56,7 @@ func main() {
 
 	// Health check (public endpoint)
 	engine.GET("/health", cameraHandler.HealthCheck)
+	engine.GET("/api/v1/health", cameraHandler.HealthCheck)
 
 	// Protected API routes
 	api := engine.Group("/api/v1")
@@ -66,6 +67,14 @@ func main() {
 		api.POST("/cameras/stop-stream", cameraHandler.StopStream)
 		api.GET("/cameras/:id/status", cameraHandler.GetStreamStatus)
 		api.GET("/cameras/streams/all", cameraHandler.GetAllStreams)
+
+		api.GET("/cameras/:id/stats", cameraHandler.GetStreamStats)
+		api.POST("/cameras/:id/toggle-face-detection", cameraHandler.ToggleFaceDetection)
+		api.POST("/cameras/:id/frame-skip-interval", cameraHandler.UpdateFrameSkipInterval)
+		api.GET("/cameras/:id/metrics", cameraHandler.GetCameraMetrics)
+		api.GET("/metrics", cameraHandler.GetAllMetrics)
+		api.GET("/performance", cameraHandler.GetPerformanceStats)
+
 	}
 
 	// Handle graceful shutdown

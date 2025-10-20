@@ -1,9 +1,5 @@
 package models
 
-import (
-	"time"
-)
-
 // Camera represents a camera managed by the worker
 type Camera struct {
 	ID       string `json:"id"`
@@ -11,23 +7,6 @@ type Camera struct {
 	RTSPUrl  string `json:"rtspUrl"`
 	Location string `json:"location,omitempty"`
 	FPS      int    `json:"fps"`
-}
-
-// StreamSession represents an active streaming session
-type StreamSession struct {
-	CameraID        string
-	Camera          *Camera
-	Status          StreamStatus
-	StartTime       time.Time
-	RTSPInputStream string // Path in MediaMTX
-	WebRTCOutputURL string // URL for frontend
-	FrameCount      int64
-	LastFrameTime   time.Time
-	ErrorCount      int
-	LastError       error
-	Reconnect       chan bool
-	Stop            chan bool
-	Done            chan bool
 }
 
 // StreamStatus represents the current status of a stream
@@ -111,4 +90,19 @@ type HealthCheckResponse struct {
 	TotalProcessedFrames int64                   `json:"totalProcessedFrames"`
 	UptimeSeconds        int64                   `json:"uptimeSeconds"`
 	StreamSessions       map[string]StreamStatus `json:"streamSessions"`
+}
+
+// FaceDetectionToggleRequest is the request payload for toggling face detection
+type FaceDetectionToggleRequest struct {
+	CameraID string `json:"cameraId" binding:"required"`
+	Enabled  bool   `json:"enabled" binding:"required"`
+}
+
+// FaceDetectionToggleResponse is the response for toggling face detection
+type FaceDetectionToggleResponse struct {
+	Success              bool   `json:"success"`
+	CameraID             string `json:"cameraId"`
+	FaceDetectionEnabled bool   `json:"faceDetectionEnabled"`
+	Message              string `json:"message,omitempty"`
+	Error                string `json:"error,omitempty"`
 }

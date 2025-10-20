@@ -57,6 +57,7 @@ func LoadConfig() (*Config, error) {
 		FrameSkipInterval:    getEnvInt("FRAME_SKIP_INTERVAL", 2),
 		StreamConnectTimeout: getEnvInt("STREAM_CONNECT_TIMEOUT", 30),
 		SnapshotStoragePath:  getEnvString("SNAPSHOT_STORAGE_PATH", "/tmp/visionguard/snapshots"),
+		
 	}
 
 	// Validate configuration
