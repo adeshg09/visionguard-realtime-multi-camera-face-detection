@@ -1,53 +1,28 @@
-FROM golang:1.25-alpine AS builder
+# Single stage build for Go worker service with OpenCV
+FROM gocv/opencv:4.8.1
 
 # Set working directory
 WORKDIR /app
 
-# Install build dependencies including wget and bzip2
-RUN apk add --no-cache \
-    git \
+# Install additional dependencies
+RUN apt-get update && apt-get install -y \
     wget \
-    bzip2 \
-    ffmpeg \
+    curl \
     ca-certificates \
-    tzdata \
-    gcc \
-    musl-dev \
-    make \
-    cmake \
-    g++ \
-    libsm \
-    libxext \
-    libgomp \
-    libstdc++ \
-    libgfortran \
-    pkgconfig \
-    boost-dev \
-    lapack-dev \
-    opencv-dev \
-    libjpeg-turbo-dev \
-    openblas-dev
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# Build and install dlib from source
-RUN mkdir /dlib && \
-    cd /dlib && \
-    wget http://dlib.net/files/dlib-19.24.tar.bz2 && \
-    tar xf dlib-19.24.tar.bz2 && \
-    cd dlib-19.24 && \
-    mkdir build && \
-    cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build . --config Release && \
-    make install && \
-    ldconfig /usr/local/lib || true && \
-    cd / && \
-    rm -rf /dlib
+# Install Go 1.23.0
+RUN wget -O go1.23.0.linux-amd64.tar.gz https://golang.org/dl/go1.23.0.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && \
+    tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz && \
+    rm go1.23.0.linux-amd64.tar.gz
 
-# Copy missing JPEG headers (common issue with dlib)
-RUN cp /usr/local/include/dlib/external/libjpeg/*.h /usr/include/ 2>/dev/null || true
+# Update PATH to use the new Go version
+ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Set PKG_CONFIG_PATH for dlib
-ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+# Verify Go version
+RUN go version
 
 # Copy Go module files
 COPY go.mod go.sum ./
@@ -58,50 +33,14 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the Go binary with CGO enabled (required for go-face and gocv)
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-    CGO_CFLAGS="-I/usr/local/include" \
-    CGO_LDFLAGS="-L/usr/local/lib -ldlib -lopenblas -llapack" \
-    go build -ldflags="-s -w" -o worker-service ./cmd/main.go
+# Build the Go binary
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o worker-service ./cmd/main.go
 
-# Final stage - smaller runtime image
-FROM alpine:latest
-
-# Install runtime dependencies only
-RUN apk add --no-cache \
-    ca-certificates \
-    tzdata \
-    ffmpeg \
-    libstdc++ \
-    libgomp \
-    libgfortran \
-    opencv \
-    libjpeg-turbo \
-    openblas \
-    lapack
-
-# Copy dlib library from builder
-COPY --from=builder /usr/local/lib/libdlib.so* /usr/local/lib/
-COPY --from=builder /usr/local/include/dlib /usr/local/include/dlib
-
-# Set library path
-RUN ldconfig /usr/local/lib || true
-
-WORKDIR /app
-
-# Copy the binary from builder
-COPY --from=builder /app/worker-service .
-
-# Download face detection models from dlib
-# Required by go-face for face detection and recognition
+# Create models directory and download face detection models
 RUN mkdir -p /app/models && \
     cd /app/models && \
-    wget http://dlib.net/files/mmod_human_face_detector.dat.bz2 && \
-    bunzip2 mmod_human_face_detector.dat.bz2 && \
-    wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2 && \
-    bunzip2 shape_predictor_68_face_landmarks.dat.bz2 && \
-    wget http://dlib.net/files/dlib_face_recognition_resnet_model_v1.dat.bz2 && \
-    bunzip2 dlib_face_recognition_resnet_model_v1.dat.bz2
+    wget -q https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel && \
+    wget -q https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt
 
 # Create snapshot directory
 RUN mkdir -p /tmp/visionguard/snapshots

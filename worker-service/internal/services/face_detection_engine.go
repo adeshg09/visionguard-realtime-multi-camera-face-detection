@@ -2,41 +2,48 @@ package services
 
 import (
 	"fmt"
+	"image"
+	"path/filepath"
 	"sync"
 	"time"
 	"worker-service/internal/models"
 	"worker-service/internal/utils"
 
-	face "github.com/Kagami/go-face"
 	"gocv.io/x/gocv"
 )
 
-// FaceDetectionEngine handles face detection using go-face library
+// FaceDetectionEngine handles face detection using OpenCV DNN
 type FaceDetectionEngine struct {
-	recognizer       *face.Recognizer
+	net              gocv.Net
 	cameraID         string
 	minConfidence    float32
 	modelPath        string
+	prototxtPath     string
+	caffeModelPath   string
 	initialized      bool
 	mutex            sync.RWMutex
 	detectionCount   int64
 	totalProcessTime int64
 	lastError        error
+	inputSize        image.Point
 }
 
-// NewFaceDetectionEngine creates a new face detection engine
+// NewFaceDetectionEngine creates a new OpenCV DNN-based face detection engine
 func NewFaceDetectionEngine(cameraID string, modelPath string, minConfidence float32) *FaceDetectionEngine {
 	return &FaceDetectionEngine{
 		cameraID:         cameraID,
 		minConfidence:    minConfidence,
 		modelPath:        modelPath,
+		prototxtPath:     filepath.Join(modelPath, "deploy.prototxt"),
+		caffeModelPath:   filepath.Join(modelPath, "res10_300x300_ssd_iter_140000.caffemodel"),
 		initialized:      false,
 		detectionCount:   0,
 		totalProcessTime: 0,
+		inputSize:        image.Pt(300, 300), // Standard SSD input size
 	}
 }
 
-// Initialize loads the face detection model
+// Initialize loads the OpenCV DNN face detection model
 func (fde *FaceDetectionEngine) Initialize() error {
 	fde.mutex.Lock()
 	defer fde.mutex.Unlock()
@@ -47,27 +54,33 @@ func (fde *FaceDetectionEngine) Initialize() error {
 		return nil
 	}
 
-	logger.Infof("[FaceDetectionEngine] Loading face detection model from: %s", fde.modelPath)
+	logger.Infof("[FaceDetectionEngine] Loading OpenCV DNN model from: %s", fde.modelPath)
 
-	// Load the face recognizer with the pre-trained model
-	// go-face requires the model directory path containing the .dat files
-	rec, err := face.NewRecognizer(fde.modelPath)
-	if err != nil {
-		logger.Errorf("[FaceDetectionEngine] Failed to load model: %v", err)
-		fde.lastError = err
-		return fmt.Errorf("failed to load face detection model: %w", err)
+	// Load the DNN model using Caffe framework
+	// This model uses ResNet-10 architecture with SSD
+	net := gocv.ReadNetFromCaffe(fde.prototxtPath, fde.caffeModelPath)
+	if net.Empty() {
+		logger.Errorf("[FaceDetectionEngine] Failed to load DNN model")
+		fde.lastError = fmt.Errorf("failed to load DNN model from %s", fde.modelPath)
+		return fde.lastError
 	}
 
-	fde.recognizer = rec
+	// Set backend to default (CPU)
+	// For GPU support: net.SetPreferableBackend(gocv.NetBackendCUDA)
+	net.SetPreferableBackend(gocv.NetBackendDefault)
+	net.SetPreferableTarget(gocv.NetTargetCPU)
+
+	fde.net = net
 	fde.initialized = true
 
-	logger.Infof("[FaceDetectionEngine] Face detection model loaded successfully")
+	logger.Infof("[FaceDetectionEngine] OpenCV DNN face detection model loaded successfully")
+	logger.Infof("[FaceDetectionEngine] Model details - Input size: %v, Min confidence: %.2f",
+		fde.inputSize, fde.minConfidence)
 
 	return nil
 }
 
-// DetectFaces detects faces in the provided frame
-// Returns a slice of Face objects with Rectangle and Descriptor
+// DetectFaces detects faces in the provided frame using OpenCV DNN
 func (fde *FaceDetectionEngine) DetectFaces(frame gocv.Mat) ([]models.FaceDetection, error) {
 	fde.mutex.RLock()
 	defer fde.mutex.RUnlock()
@@ -84,50 +97,119 @@ func (fde *FaceDetectionEngine) DetectFaces(frame gocv.Mat) ([]models.FaceDetect
 
 	startTime := time.Now()
 
-	// Convert OpenCV Mat to JPEG byte array for go-face
-	// go-face's Recognize() method accepts []byte of JPEG-encoded image
-	buf, err := gocv.IMEncode(gocv.JPEGFileExt, frame)
-	if err != nil {
-		logger.Errorf("[FaceDetectionEngine] Failed to encode frame: %v", err)
-		return nil, fmt.Errorf("failed to encode frame: %w", err)
-	}
-	defer buf.Close()
+	// Get frame dimensions
+	frameHeight := frame.Rows()
+	frameWidth := frame.Cols()
 
-	// Get the byte slice from the buffer
-	imgData := buf.GetBytes()
+	// Create blob from image
+	// Parameters: image, scaleFactor, size, mean, swapRB, crop
+	blob := gocv.BlobFromImage(
+		frame,
+		1.0,                                    // Scale factor
+		fde.inputSize,                          // Size (300x300)
+		gocv.NewScalar(104.0, 177.0, 123.0, 0), // Mean subtraction values (OpenCV default)
+		false,                                  // swapRB
+		false,                                  // crop
+	)
+	defer blob.Close()
 
-	// Detect faces using go-face
-	// Recognize() accepts []byte of JPEG-encoded image data
-	faces, err := fde.recognizer.Recognize(imgData)
-	if err != nil {
-		logger.Errorf("[FaceDetectionEngine] Face detection failed: %v", err)
-		return nil, fmt.Errorf("face detection failed: %w", err)
-	}
+	// Set input blob to the network
+	fde.net.SetInput(blob, "")
+
+	// Run forward pass to get detections
+	detectionMat := fde.net.Forward("")
+	defer detectionMat.Close()
+
+	// Process detections
+	// Output format: [1, 1, N, 7] where N is number of detections
+	// Each detection: [batchId, classId, confidence, left, top, right, bottom]
+	detections := fde.processDetections(detectionMat, frameWidth, frameHeight)
 
 	processingTime := time.Since(startTime)
-	logger.Debugf("[FaceDetectionEngine] Detected %d faces in %v", len(faces), processingTime)
+	logger.Debugf("[FaceDetectionEngine] Detected %d faces in %v", len(detections), processingTime)
 
-	// Convert go-face results to our model
+	// Update statistics
+	fde.mutex.RUnlock()
+	fde.mutex.Lock()
+	fde.detectionCount += int64(len(detections))
+	fde.totalProcessTime += processingTime.Milliseconds()
+	fde.mutex.Unlock()
+	fde.mutex.RLock()
+
+	return detections, nil
+}
+
+// processDetections extracts face detections from DNN output
+func (fde *FaceDetectionEngine) processDetections(detectionMat gocv.Mat, frameWidth, frameHeight int) []models.FaceDetection {
 	var detections []models.FaceDetection
-	for i, f := range faces {
-		rect := f.Rectangle
+
+	// Get the detection matrix size
+	// Format is typically [1, 1, N, 7]
+	sizes := detectionMat.Size()
+	if len(sizes) < 3 {
+		return detections
+	}
+
+	numDetections := sizes[2]
+
+	// Reshape the matrix to access detection data
+	// The output is [1, 1, N, 7], we need to reshape to [N, 7] for easier access
+	detectionMat = detectionMat.Reshape(1, numDetections)
+
+	for i := 0; i < numDetections; i++ {
+		// Get detection data - each row has 7 values:
+		// [0: batchId, 1: classId, 2: confidence, 3: left, 4: top, 5: right, 6: bottom]
+		confidence := detectionMat.GetFloatAt(i, 2)
+
+		// Filter by confidence threshold
+		if confidence < fde.minConfidence {
+			continue
+		}
+
+		// Get bounding box coordinates (normalized to [0, 1])
+		left := detectionMat.GetFloatAt(i, 3)
+		top := detectionMat.GetFloatAt(i, 4)
+		right := detectionMat.GetFloatAt(i, 5)
+		bottom := detectionMat.GetFloatAt(i, 6)
+
+		// Convert to pixel coordinates
+		x := int32(left * float32(frameWidth))
+		y := int32(top * float32(frameHeight))
+		width := int32((right - left) * float32(frameWidth))
+		height := int32((bottom - top) * float32(frameHeight))
+
+		// Ensure coordinates are within frame bounds
+		if x < 0 {
+			x = 0
+		}
+		if y < 0 {
+			y = 0
+		}
+		if x+width > int32(frameWidth) {
+			width = int32(frameWidth) - x
+		}
+		if y+height > int32(frameHeight) {
+			height = int32(frameHeight) - y
+		}
+
+		// Skip invalid detections
+		if width <= 0 || height <= 0 {
+			continue
+		}
+
 		detection := models.FaceDetection{
 			ID:         fmt.Sprintf("face_%d", i),
-			X:          int32(rect.Min.X),
-			Y:          int32(rect.Min.Y),
-			Width:      int32(rect.Max.X - rect.Min.X),
-			Height:     int32(rect.Max.Y - rect.Min.Y),
-			Confidence: 0.95, // go-face doesn't provide confidence directly
+			X:          x,
+			Y:          y,
+			Width:      width,
+			Height:     height,
+			Confidence: confidence,
 		}
 
 		detections = append(detections, detection)
 	}
 
-	// Update statistics
-	fde.detectionCount += int64(len(detections))
-	fde.totalProcessTime += processingTime.Milliseconds()
-
-	return detections, nil
+	return detections
 }
 
 // GetStatistics returns detection statistics
@@ -147,6 +229,8 @@ func (fde *FaceDetectionEngine) GetStatistics() map[string]interface{} {
 		"averageTimeMs":   avgTime,
 		"totalTimeMs":     fde.totalProcessTime,
 		"minConfidence":   fde.minConfidence,
+		"modelType":       "OpenCV DNN (ResNet-10 SSD)",
+		"inputSize":       fde.inputSize,
 		"lastError":       fde.lastError,
 	}
 }
@@ -156,9 +240,10 @@ func (fde *FaceDetectionEngine) Close() error {
 	fde.mutex.Lock()
 	defer fde.mutex.Unlock()
 
-	if fde.recognizer != nil {
-		fde.recognizer.Close()
-		fde.recognizer = nil
+	if fde.initialized && !fde.net.Empty() {
+		if err := fde.net.Close(); err != nil {
+			return fmt.Errorf("failed to close DNN network: %w", err)
+		}
 	}
 
 	fde.initialized = false
@@ -176,6 +261,14 @@ func (fde *FaceDetectionEngine) IsInitialized() bool {
 func (fde *FaceDetectionEngine) SetMinConfidence(confidence float32) {
 	fde.mutex.Lock()
 	defer fde.mutex.Unlock()
+
+	if confidence < 0.0 {
+		confidence = 0.0
+	}
+	if confidence > 1.0 {
+		confidence = 1.0
+	}
+
 	fde.minConfidence = confidence
 }
 
@@ -184,4 +277,24 @@ func (fde *FaceDetectionEngine) GetMinConfidence() float32 {
 	fde.mutex.RLock()
 	defer fde.mutex.RUnlock()
 	return fde.minConfidence
+}
+
+// SetInputSize sets the input size for the DNN model
+func (fde *FaceDetectionEngine) SetInputSize(width, height int) error {
+	fde.mutex.Lock()
+	defer fde.mutex.Unlock()
+
+	if width <= 0 || height <= 0 {
+		return fmt.Errorf("invalid input size: %dx%d", width, height)
+	}
+
+	fde.inputSize = image.Pt(width, height)
+	return nil
+}
+
+// GetInputSize returns the current input size
+func (fde *FaceDetectionEngine) GetInputSize() image.Point {
+	fde.mutex.RLock()
+	defer fde.mutex.RUnlock()
+	return fde.inputSize
 }

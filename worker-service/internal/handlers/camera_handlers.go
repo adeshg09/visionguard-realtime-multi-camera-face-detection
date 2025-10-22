@@ -161,7 +161,7 @@ func (h *CameraHandler) GetStreamStats(c *gin.Context) {
 	})
 }
 
-// // ToggleFaceDetection handles POST /api/v1/camera/:id/face-detection
+// ToggleFaceDetection handles POST /api/v1/camera/:id/face-detection
 func (h *CameraHandler) ToggleFaceDetection(c *gin.Context) {
 	logger := utils.GetLogger()
 
@@ -204,7 +204,7 @@ func (h *CameraHandler) ToggleFaceDetection(c *gin.Context) {
 	})
 }
 
-// // UpdateFrameSkipInterval handles POST /api/v1/camera/:id/frame-skip
+// UpdateFrameSkipInterval handles POST /api/v1/camera/:id/frame-skip
 func (h *CameraHandler) UpdateFrameSkipInterval(c *gin.Context) {
 	logger := utils.GetLogger()
 
@@ -249,7 +249,7 @@ func (h *CameraHandler) UpdateFrameSkipInterval(c *gin.Context) {
 	})
 }
 
-// // GetCameraMetrics handles GET /api/v1/camera/:id/metrics
+// GetCameraMetrics handles GET /api/v1/camera/:id/metrics
 func (h *CameraHandler) GetCameraMetrics(c *gin.Context) {
 	logger := utils.GetLogger()
 
@@ -278,7 +278,7 @@ func (h *CameraHandler) GetCameraMetrics(c *gin.Context) {
 	})
 }
 
-// // GetAllMetrics handles GET /api/v1/metrics
+// GetAllMetrics handles GET /api/v1/metrics
 func (h *CameraHandler) GetAllMetrics(c *gin.Context) {
 	allStreams := h.streamManager.GetAllStreams()
 
@@ -297,14 +297,24 @@ func (h *CameraHandler) GetAllMetrics(c *gin.Context) {
 	})
 }
 
-// // GetPerformanceStats handles GET /api/v1/performance
+// GetPerformanceStats handles GET /api/v1/performance
 func (h *CameraHandler) GetPerformanceStats(c *gin.Context) {
 	allStreams := h.streamManager.GetAllStreams()
 
 	performance := make(map[string]interface{})
-	for cameraID, session := range allStreams {
-		if session.PerfOptimizer != nil {
-			performance[cameraID] = session.PerfOptimizer.GetMetrics()
+	for cameraID := range allStreams {
+		// Use GetStreamStats which already includes performance metrics
+		stats, err := h.streamManager.GetStreamStats(cameraID)
+		if err == nil {
+			// Extract performance-related fields
+			performanceData := map[string]interface{}{
+				"processingFps":           stats["processingFps"],
+				"averageProcessingTimeMs": stats["averageProcessingTimeMs"],
+				"currentFps":              stats["currentFps"],
+				"framesProcessed":         stats["framesProcessed"],
+				"detectionRate":           stats["detectionRate"],
+			}
+			performance[cameraID] = performanceData
 		}
 	}
 

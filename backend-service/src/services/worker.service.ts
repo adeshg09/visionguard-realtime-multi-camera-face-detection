@@ -54,17 +54,15 @@ export const createWorkerService = () => {
     });
   };
 
-  // const getStreamStatus = async (
-  //   cameraId: string
-  // ) => {
-  //   return makeWorkerRequest(`/camera/${cameraId}/status`, {
-  //     method: "GET",
-  //   });
-  // };
+  const getStreamStatus = async (cameraId: string) => {
+    return makeWorkerRequest(`/camera/${cameraId}/status`, {
+      method: "GET",
+    });
+  };
 
   return {
     startStream,
     stopStream,
-    // getStreamStatus,
+    getStreamStatus,
   };
 };

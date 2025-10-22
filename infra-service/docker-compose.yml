@@ -68,12 +68,13 @@ services:
     build:
       context: ../frontend-service
       dockerfile: Dockerfile
+      args:
+        VITE_APP_API_BASE_URL: http://localhost:3000/api/v1
+        VITE_APP_ACCESS_TOKEN_KEY: visionguard-access-token
     container_name: visionguard-frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_SERVICE_PORT:-5173}:${FRONTEND_SERVICE_PORT:-5173}"
-    env_file:
-      - ./env/frontend.env
     networks:
       - ${VISIONGUARD_NETWORK_NAME}
 

@@ -33,15 +33,15 @@ func main() {
 	gin.SetMode(cfg.GinMode)
 
 	// Initialize services
-	mediaClient := services.NewMediaMTXClient(cfg.MediaMTXAPIURL)
-	streamManager := services.NewStreamManager(cfg.MaxConcurrentStreams, mediaClient)
+	mediamtxClient := services.NewMediaMTXClient(cfg.MediaMTXAPIURL)
+	streamManager := services.NewStreamManager(cfg.MaxConcurrentStreams, mediamtxClient)
 
 	// Check MediaMTX connectivity
-	if !mediaClient.IsHealthy() {
-		logger.Warnf("⚠️  MediaMTX is not responding at %s", cfg.MediaMTXAPIURL)
-		logger.Infof("Will retry connection when streams are started...")
+	healthy, msg := mediamtxClient.IsHealthy()
+	if !healthy {
+		logger.Warnf("⚠️ MediaMTX not healthy: %s", msg)
 	} else {
-		logger.Infof("✓ MediaMTX is healthy at %s", cfg.MediaMTXAPIURL)
+		logger.Infof("✓ MediaMTX healthy: %s", msg)
 	}
 
 	// Initialize handlers

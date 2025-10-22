@@ -42,6 +42,7 @@ export const RESPONSE_SUCCESS_MESSAGES = {
   CAMERA_RETRIEVED: "Camera retrieved successfully",
   STREAM_STARTED: "Stream started successfully",
   STREAM_STOPPED: "Stream stopped successfully",
+  STREAM_STATUS_FETCHED: "Stream status fetched successfully",
 };
 
 export const RESPONSE_ERROR_MESSAGES = {
@@ -57,4 +58,5 @@ export const RESPONSE_ERROR_MESSAGES = {
   CAMERA_NOT_FOUND: "Camera not found",
   STREAM_START_FAILED: "Failed to start stream",
   STREAM_STOP_FAILED: "Failed to stop stream",
+  STREAM_STATUS_FETCH_FAILED: "Failed to fetch stream status",
 };

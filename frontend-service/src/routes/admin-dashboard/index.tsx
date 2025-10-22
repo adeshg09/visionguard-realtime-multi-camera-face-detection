@@ -2,7 +2,7 @@
 import { lazy } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { PAGE_ADMIN_DASHBOARD } from "../paths";
-import AdminDashboardLayout from "@/layout/AdminDashboardLayout";
+import AdminDashboardLayout from "@/layout/adminDashboardLayout";
 import AuthGuard from "../guards/authGuard";
 
 /* Local Imports */

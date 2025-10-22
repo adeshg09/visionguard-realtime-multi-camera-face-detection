@@ -4,6 +4,7 @@ import {
   RESPONSE_SUCCESS_MESSAGES,
   RESPONSE_ERROR_MESSAGES,
   STATUS_CODES,
+  RESPONSE_MESSAGES,
 } from "@/constants/index.js";
 import { PaginationParams } from "@/types/index.js";
 import { successResponse, errorResponse } from "@/utils/response.js";
@@ -216,6 +217,27 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  const getStreamStatus = async (c: Context) => {
+    try {
+      const cameraId = c.req.param("id");
+      const result = await workerService.getStreamStatus(cameraId);
+      return successResponse(
+        c,
+        STATUS_CODES.OK,
+        RESPONSE_MESSAGES.SUCCESS,
+        RESPONSE_SUCCESS_MESSAGES.STREAM_STATUS_FETCHED,
+        result
+      );
+    } catch (error) {
+      return errorResponse(
+        c,
+        STATUS_CODES.BAD_REQUEST,
+        RESPONSE_ERROR_MESSAGES.STREAM_STATUS_FETCH_FAILED,
+        error
+      );
+    }
+  };
+
   return {
     createCamera,
     getCameras,
@@ -224,5 +246,6 @@ export const createCameraController = (prisma: PrismaClient) => {
     deleteCamera,
     startStream,
     stopStream,
+    getStreamStatus,
   };
 };

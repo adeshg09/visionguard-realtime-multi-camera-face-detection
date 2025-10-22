@@ -1,10 +1,10 @@
 import { Toast } from "@/components/toast";
-import { loginRequest } from "@/services/auth/auth";
+import { loginRequest, type LoginApiRequest } from "@/services/auth/auth";
 import { useMutation } from "@tanstack/react-query";
 
 export const useAuth = (): any => {
   const loginMutation = useMutation({
-    mutationFn: async ({ username, password, rememberMe }: any) => {
+    mutationFn: async ({ username, password, rememberMe }: LoginApiRequest) => {
       const response = await loginRequest({
         username,
         password,

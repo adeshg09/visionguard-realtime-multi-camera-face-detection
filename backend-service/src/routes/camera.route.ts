@@ -42,5 +42,8 @@ export const createCameraRoutes = (prisma: PrismaClient) => {
   cameraRoutes.post("/start-stream/:id", cameraController.startStream);
   cameraRoutes.post("/stop-stream/:id", cameraController.stopStream);
 
+  // Stream status
+  cameraRoutes.get("/get-stream-status/:id", cameraController.getStreamStatus);
+
   return cameraRoutes;
 };
