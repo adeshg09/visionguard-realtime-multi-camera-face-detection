@@ -2,11 +2,11 @@ package models
 
 // Camera represents a camera managed by the worker
 type Camera struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	RTSPUrl  string `json:"rtspUrl"`
-	Location string `json:"location,omitempty"`
-	FPS      int    `json:"fps"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	RTSPUrl string `json:"rtspUrl"`
+	// Location string `json:"location,omitempty"`
+	FPS int `json:"fps"`
 }
 
 // StreamStatus represents the current status of a stream
@@ -25,7 +25,8 @@ type StartStreamRequest struct {
 	CameraID string `json:"cameraId" binding:"required"`
 	RTSPUrl  string `json:"rtspUrl" binding:"required"`
 	Name     string `json:"name" binding:"required"`
-	FPS      int    `json:"fps"`
+	// Location string `json:"location" binding:"required"`
+	FPS int `json:"fps"`
 }
 
 // StartStreamResponse is the response for starting a stream
@@ -87,8 +88,6 @@ type HealthCheckResponse struct {
 	Version              string                  `json:"version"`
 	ActiveStreams        int                     `json:"activeStreams"`
 	MaxConcurrentStreams int                     `json:"maxConcurrentStreams"`
-	TotalProcessedFrames int64                   `json:"totalProcessedFrames"`
-	UptimeSeconds        int64                   `json:"uptimeSeconds"`
 	StreamSessions       map[string]StreamStatus `json:"streamSessions"`
 }
 

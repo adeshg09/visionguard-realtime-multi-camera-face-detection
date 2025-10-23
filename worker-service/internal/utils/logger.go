@@ -2,37 +2,46 @@ package utils
 
 import (
 	"os"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
-// Logger is a global logger instance
-var Logger *logrus.Logger
+var logger *logrus.Logger
 
-// InitLogger initializes the global logger with specified level
+// InitLogger initializes the global logger
 func InitLogger(logLevel string) {
-	Logger = logrus.New()
-	Logger.Out = os.Stdout
+	logger = logrus.New()
 
-	// Set formatter for better readability
-	Logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-		ForceColors:     true,
-	})
+	// Set output to stdout
+	logger.SetOutput(os.Stdout)
 
 	// Set log level
 	level, err := logrus.ParseLevel(logLevel)
 	if err != nil {
 		level = logrus.InfoLevel
 	}
-	Logger.SetLevel(level)
+	logger.SetLevel(level)
+
+	// Set formatter
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05",
+		ForceColors:     true,
+	})
+
+	logger.Infof("Logger initialized with level: %s", logLevel)
 }
 
 // GetLogger returns the global logger instance
 func GetLogger() *logrus.Logger {
-	if Logger == nil {
+	if logger == nil {
 		InitLogger("info")
 	}
-	return Logger
+	return logger
+}
+
+// GetCurrentTime returns the current time
+func GetCurrentTime() time.Time {
+	return time.Now()
 }
