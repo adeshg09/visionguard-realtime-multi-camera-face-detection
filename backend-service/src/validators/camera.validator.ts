@@ -9,6 +9,7 @@ export const createCameraSchema = z.object({
   description: z.string().max(500).optional(),
   resolution: z.string().optional(),
   fps: z.number().min(1).max(60).optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const updateCameraSchema = z.object({
@@ -26,4 +27,12 @@ export const paginationSchema = z.object({
   limit: z.number().min(1).max(100).default(10),
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
+});
+
+export const toggleFaceDetectionSchema = z.object({
+  enabled: z.boolean(),
+});
+
+export const updateFrameSkipIntervalSchema = z.object({
+  frameSkipInterval: z.number().min(1).max(10),
 });

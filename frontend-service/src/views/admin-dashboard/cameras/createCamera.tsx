@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import AdminDashboardPage from "@/components/page/adminDashboardPage";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import ButtonLoader from "@/components/loader/inlineLoader";
 import {
   Form,
@@ -18,6 +19,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import AdminDashboardFormLayout from "@/layout/adminDashboardLayout/components/adminDashboardFormLayout";
 import { PAGE_ADMIN_DASHBOARD } from "@/routes/paths";
@@ -43,7 +45,7 @@ const CreateCamera = (): JSX.Element => {
   /* Hooks */
   const { id } = useParams();
   const navigate = useNavigate();
-  const { createCameraMutation, updateCameraMutation, GetCameraByIdMutation } =
+  const { createCameraMutation, updateCameraMutation, getCameraByIdMutation } =
     useCamera();
 
   const form = useForm<CameraFormValues>({
@@ -54,7 +56,8 @@ const CreateCamera = (): JSX.Element => {
       txtLocation: "",
       txtDescription: "",
       txtResolution: "",
-      txtFps: 0,
+      txtFps: undefined,
+      chkIsActive: true,
     },
   });
 
@@ -65,18 +68,18 @@ const CreateCamera = (): JSX.Element => {
    * @returns {void}
    */
   const getCameraById = async (cameraId: string): Promise<void> => {
-    await GetCameraByIdMutation.mutateAsync(cameraId, {
-      onSuccess: (data: any) => {
-        const editCameraData = data?.data;
-        form.reset({
-          txtName: editCameraData?.name,
-          txtRtspUrl: editCameraData?.rtspUrl,
-          txtLocation: editCameraData?.location,
-          txtDescription: editCameraData?.description,
-          txtResolution: editCameraData?.resolution,
-          txtFps: editCameraData?.fps,
-        });
-      },
+    const response = await getCameraByIdMutation.mutateAsync(cameraId);
+
+    const cameraData = response?.data?.camera;
+    console.log("data", cameraData);
+    form.reset({
+      txtName: cameraData.name,
+      txtRtspUrl: cameraData.rtspUrl,
+      txtLocation: cameraData.location || "",
+      txtDescription: cameraData.description || "",
+      txtResolution: cameraData.resolution || "",
+      txtFps: cameraData.fps || undefined,
+      chkIsActive: cameraData.isActive,
     });
   };
 
@@ -97,6 +100,7 @@ const CreateCamera = (): JSX.Element => {
           description: values.txtDescription,
           resolution: values.txtResolution,
           fps: values.txtFps,
+          isActive: values.chkIsActive,
         },
       });
     } else {
@@ -107,6 +111,7 @@ const CreateCamera = (): JSX.Element => {
         description: values.txtDescription,
         resolution: values.txtResolution,
         fps: values.txtFps,
+        isActive: values.chkIsActive,
       });
     }
     navigate(manageCameraPath);
@@ -129,15 +134,15 @@ const CreateCamera = (): JSX.Element => {
 
   /* Output */
   return (
-    <AdminDashboardPage title="Create Camera">
-      {!GetCameraByIdMutation?.isPending ? (
+    <AdminDashboardPage title={id ? "Update Camera" : "Create Camera"}>
+      {!getCameraByIdMutation?.isPending ? (
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleFormSubmit)}
             className="w-full h-full"
           >
             <AdminDashboardFormLayout
-              title="Create Camera"
+              title={id ? "Update Camera" : "Create Camera"}
               description={
                 id
                   ? "Please update the details below to update camera"
@@ -149,25 +154,32 @@ const CreateCamera = (): JSX.Element => {
                     type="button"
                     variant="outline"
                     onClick={handleBack}
-                    disabled={createCameraMutation.isPending}
+                    disabled={
+                      createCameraMutation?.isPending ||
+                      updateCameraMutation?.isPending
+                    }
                     size="lg"
                   >
                     {id ? "Cancel" : "Back"}
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createCameraMutation.isPending}
+                    disabled={
+                      createCameraMutation?.isPending ||
+                      updateCameraMutation?.isPending
+                    }
                     size="lg"
                   >
-                    {createCameraMutation.isPending ? (
+                    {createCameraMutation?.isPending ||
+                    updateCameraMutation?.isPending ? (
                       <div className="flex items-center justify-between gap-2">
                         <ButtonLoader />
                         {id ? "Updating..." : "Creating..."}
                       </div>
                     ) : id ? (
-                      "Update"
+                      "Update Camera"
                     ) : (
-                      "Create"
+                      "Create Camera"
                     )}
                   </Button>
                 </>
@@ -258,7 +270,7 @@ const CreateCamera = (): JSX.Element => {
                     <FormLabel>Resolution</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter resolution"
+                        placeholder="Enter resolution (e.g., 1920x1080)"
                         {...field}
                         maxLength={50}
                       />
@@ -289,9 +301,36 @@ const CreateCamera = (): JSX.Element => {
                             if (!isNaN(num)) field.onChange(num);
                           }
                         }}
+                        min="1"
+                        max="60"
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Active Status */}
+              <FormField
+                control={form.control}
+                name="chkIsActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 cursor-pointer">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Active Status</FormLabel>
+                      <FormDescription>
+                        {field.value
+                          ? "Camera is active and can stream video"
+                          : "Camera is inactive and cannot stream video"}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="cursor-pointer"
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

@@ -43,8 +43,8 @@ const WebRTCPlayer = ({
       setError(null);
 
       // Prepare WHEP URL
-      const baseUrl = webrtcUrl.endsWith("/")
-        ? webrtcUrl.slice(0, -1)
+      const baseUrl = webrtcUrl?.endsWith("/")
+        ? webrtcUrl?.slice(0, -1)
         : webrtcUrl;
       const whepUrl = `${baseUrl}/whep`;
 

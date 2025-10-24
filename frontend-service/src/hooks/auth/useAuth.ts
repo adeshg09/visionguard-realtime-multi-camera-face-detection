@@ -1,4 +1,4 @@
-import { Toast } from "@/components/toast";
+import Toast from "@/components/toast";
 import { loginRequest, type LoginApiRequest } from "@/services/auth/auth";
 import { useMutation } from "@tanstack/react-query";
 

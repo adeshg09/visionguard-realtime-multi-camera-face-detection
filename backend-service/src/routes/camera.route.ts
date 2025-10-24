@@ -8,7 +8,9 @@ import {
 import {
   createCameraSchema,
   paginationSchema,
+  toggleFaceDetectionSchema,
   updateCameraSchema,
+  updateFrameSkipIntervalSchema,
 } from "@/validators/camera.validator.js";
 import { createCameraController } from "@/controllers/camera.controller.js";
 
@@ -44,6 +46,18 @@ export const createCameraRoutes = (prisma: PrismaClient) => {
 
   // Stream status
   cameraRoutes.get("/get-stream-status/:id", cameraController.getStreamStatus);
+
+  // Face detection and frame skip interval
+  cameraRoutes.post(
+    "/toggle-face-detection/:id",
+    validateBody(toggleFaceDetectionSchema),
+    cameraController.toggleFaceDetection
+  );
+  cameraRoutes.post(
+    "/update-frame-skip-interval/:id",
+    validateBody(updateFrameSkipIntervalSchema),
+    cameraController.updateFrameSkipInterval
+  );
 
   return cameraRoutes;
 };

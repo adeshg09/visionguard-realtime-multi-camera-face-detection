@@ -1,39 +1,63 @@
-import { CheckCircle, XCircle, AlertTriangle, Info } from "lucide-react";
+/* Imports */
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
+// ----------------------------------------------------------------------
+
+/* Types */
 type ToastProps = {
   message: string;
   description?: string;
 };
 
+// ----------------------------------------------------------------------
+
+/**
+ * Toast component to show different types of toast messages
+ *
+ * @component
+ */
 const Toast = {
   success: ({ message, description }: ToastProps) => {
     toast.custom(
       (t) => (
-        <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl shadow-lg backdrop-blur-sm animate-in slide-in-from-top-2 duration-300">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
+        <div
+          className={cn(
+            "flex items-start gap-3 p-4 w-full max-w-sm bg-card border border-border/50 rounded-lg shadow-lg backdrop-blur-sm",
+            "animate-in slide-in-from-right-2 duration-300"
+          )}
+        >
+          {/* Icon Container */}
+          <div className="flex-shrink-0 mt-0.5">
+            <div className="w-8 h-8 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-emerald-900">{message}</p>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-sm font-semibold text-foreground leading-tight">
+              {message}
+            </p>
             {description && (
-              <p className="text-xs text-emerald-700 mt-1 opacity-80">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 {description}
               </p>
             )}
           </div>
+
+          {/* Close Button */}
           <button
             onClick={() => toast.dismiss(t)}
-            className="flex-shrink-0 text-emerald-400 hover:text-emerald-600 transition-colors duration-200"
+            className="flex-shrink-0 w-5 h-5 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:bg-muted/50 rounded flex items-center justify-center"
           >
-            <XCircle className="w-4 h-4" />
+            <X className="w-3 h-3" />
           </button>
         </div>
       ),
       {
-        duration: 4000,
+        duration: 2000,
       }
     );
   },
@@ -41,30 +65,42 @@ const Toast = {
   error: ({ message, description }: ToastProps) => {
     toast.custom(
       (t) => (
-        <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl shadow-lg backdrop-blur-sm animate-in slide-in-from-top-2 duration-300">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-600" />
+        <div
+          className={cn(
+            "flex items-start gap-3 p-4 w-full max-w-sm bg-card border border-border/50 rounded-lg shadow-lg backdrop-blur-sm",
+            "animate-in slide-in-from-right-2 duration-300"
+          )}
+        >
+          {/* Icon Container */}
+          <div className="flex-shrink-0 mt-0.5">
+            <div className="w-8 h-8 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20">
+              <XCircle className="w-4 h-4 text-red-600" />
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-red-900">{message}</p>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-sm font-semibold text-foreground leading-tight">
+              {message}
+            </p>
             {description && (
-              <p className="text-xs text-red-700 mt-1 opacity-80">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 {description}
               </p>
             )}
           </div>
+
+          {/* Close Button */}
           <button
             onClick={() => toast.dismiss(t)}
-            className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors duration-200"
+            className="flex-shrink-0 w-5 h-5 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:bg-muted/50 rounded flex items-center justify-center"
           >
-            <XCircle className="w-4 h-4" />
+            <X className="w-3 h-3" />
           </button>
         </div>
       ),
       {
-        duration: 5000,
+        duration: 2000,
       }
     );
   },
@@ -72,30 +108,42 @@ const Toast = {
   warning: ({ message, description }: ToastProps) => {
     toast.custom(
       (t) => (
-        <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl shadow-lg backdrop-blur-sm animate-in slide-in-from-top-2 duration-300">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
+        <div
+          className={cn(
+            "flex items-start gap-3 p-4 w-full max-w-sm bg-card border border-border/50 rounded-lg shadow-lg backdrop-blur-sm",
+            "animate-in slide-in-from-right-2 duration-300"
+          )}
+        >
+          {/* Icon Container */}
+          <div className="flex-shrink-0 mt-0.5">
+            <div className="w-8 h-8 bg-amber-500/10 rounded-full flex items-center justify-center border border-amber-500/20">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-900">{message}</p>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-sm font-semibold text-foreground leading-tight">
+              {message}
+            </p>
             {description && (
-              <p className="text-xs text-amber-700 mt-1 opacity-80">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 {description}
               </p>
             )}
           </div>
+
+          {/* Close Button */}
           <button
             onClick={() => toast.dismiss(t)}
-            className="flex-shrink-0 text-amber-400 hover:text-amber-600 transition-colors duration-200"
+            className="flex-shrink-0 w-5 h-5 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:bg-muted/50 rounded flex items-center justify-center"
           >
-            <XCircle className="w-4 h-4" />
+            <X className="w-3 h-3" />
           </button>
         </div>
       ),
       {
-        duration: 4500,
+        duration: 2000,
       }
     );
   },
@@ -103,33 +151,45 @@ const Toast = {
   info: ({ message, description }: ToastProps) => {
     toast.custom(
       (t) => (
-        <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-lg backdrop-blur-sm animate-in slide-in-from-top-2 duration-300">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <Info className="w-5 h-5 text-blue-600" />
+        <div
+          className={cn(
+            "flex items-start gap-3 p-4 w-full max-w-sm bg-card border border-border/50 rounded-lg shadow-lg backdrop-blur-sm",
+            "animate-in slide-in-from-right-2 duration-300"
+          )}
+        >
+          {/* Icon Container */}
+          <div className="flex-shrink-0 mt-0.5">
+            <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20">
+              <Info className="w-4 h-4 text-blue-600" />
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-blue-900">{message}</p>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-sm font-semibold text-foreground leading-tight">
+              {message}
+            </p>
             {description && (
-              <p className="text-xs text-blue-700 mt-1 opacity-80">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 {description}
               </p>
             )}
           </div>
+
+          {/* Close Button */}
           <button
             onClick={() => toast.dismiss(t)}
-            className="flex-shrink-0 text-blue-400 hover:text-blue-600 transition-colors duration-200"
+            className="flex-shrink-0 w-5 h-5 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:bg-muted/50 rounded flex items-center justify-center"
           >
-            <XCircle className="w-4 h-4" />
+            <X className="w-3 h-3" />
           </button>
         </div>
       ),
       {
-        duration: 4000,
+        duration: 2000,
       }
     );
   },
 };
 
-export { Toast };
+export default Toast;

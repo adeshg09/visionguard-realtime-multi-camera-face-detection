@@ -66,9 +66,42 @@ export const createWorkerService = () => {
     return response;
   };
 
+  const toggleFaceDetection = async (cameraId: string, enabled: boolean) => {
+    const response = await makeWorkerRequest(
+      `/cameras/${cameraId}/toggle-face-detection`,
+      {
+        method: "POST",
+        data: {
+          enabled,
+        },
+      }
+    );
+
+    return response;
+  };
+
+  const updateFrameSkipInterval = async (
+    cameraId: string,
+    frameSkipInterval: number
+  ) => {
+    const response = await makeWorkerRequest(
+      `/cameras/${cameraId}/frame-skip-interval`,
+      {
+        method: "POST",
+        data: {
+          frameSkipInterval,
+        },
+      }
+    );
+
+    return response;
+  };
+
   return {
     startStream,
     stopStream,
     getStreamStatus,
+    toggleFaceDetection,
+    updateFrameSkipInterval,
   };
 };

@@ -27,12 +27,6 @@ export const TOKEN_EXPIRY = {
   REMEMBER_ME: "30d",
 };
 
-export const USER_ROLES = {
-  ADMIN: "ADMIN",
-  VIEWER: "VIEWER",
-  OPERATOR: "OPERATOR",
-} as const;
-
 export const RESPONSE_SUCCESS_MESSAGES = {
   LOGIN_SUCCESS: "Login successful",
   USER_INFO_FETCHED: "User information fetched successfully",
@@ -44,6 +38,9 @@ export const RESPONSE_SUCCESS_MESSAGES = {
   STREAM_STARTED: "Stream started successfully",
   STREAM_STOPPED: "Stream stopped successfully",
   STREAM_STATUS_FETCHED: "Stream status fetched successfully",
+  FACE_DETECTION_ENABLED: "Face detection enabled successfully!",
+  FACE_DETECTION_DISABLED: "Face detection disabled successfully!",
+  FRAME_SKIP_INTERVAL_UPDATED: "Frame skip interval updated successfully!",
 };
 
 export const RESPONSE_ERROR_MESSAGES = {
@@ -60,4 +57,6 @@ export const RESPONSE_ERROR_MESSAGES = {
   STREAM_START_FAILED: "Failed to start stream",
   STREAM_STOP_FAILED: "Failed to stop stream",
   STREAM_STATUS_FETCH_FAILED: "Failed to fetch stream status",
+  FACE_DETECTION_TOGGLE_FAILED: "Failed to toggle face detection!",
+  FRAME_SKIP_UPDATE_FAILED: "Failed to update frame skip interval!",
 };

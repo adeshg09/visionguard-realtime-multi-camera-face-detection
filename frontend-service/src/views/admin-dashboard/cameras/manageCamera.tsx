@@ -28,6 +28,7 @@ const ManageCamera = (): JSX.Element => {
     getAllCamerasMutation,
     startCameraStreamMutation,
     stopCameraStreamMutation,
+    deleteCameraMutation,
   } = useCamera();
 
   /* States */
@@ -84,7 +85,6 @@ const ManageCamera = (): JSX.Element => {
           cam.id === cameraId
             ? {
                 ...response.data.camera,
-                streamUrls: response.data.streamUrls,
               }
             : cam
         )
@@ -133,11 +133,17 @@ const ManageCamera = (): JSX.Element => {
    * Function to handle camera deletion.
    *
    * @param {string} cameraId - The camera ID
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  const handleDeleteCamera = (cameraId: string): void => {
-    // TODO: Implement delete functionality
-    console.log("Delete camera:", cameraId);
+  const handleDeleteCamera = async (cameraId: string): Promise<void> => {
+    try {
+      await deleteCameraMutation.mutateAsync(cameraId);
+
+      // Remove camera from local state after successful deletion
+      setCameras((prev) => prev.filter((cam) => cam.id !== cameraId));
+    } catch (error) {
+      console.error("Failed to delete camera:", error);
+    }
   };
 
   /* Side-Effects */

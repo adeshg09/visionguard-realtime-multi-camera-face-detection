@@ -1,7 +1,6 @@
-import type { PrismaClient } from "@prisma/client";
+import { UserRole, type PrismaClient } from "@prisma/client";
 import { hashPassword } from "./password.js";
 import { logger } from "@/libs/logger.lib.js";
-import { USER_ROLES } from "@/constants/index.js";
 
 export const seedDatabase = async (prisma: PrismaClient) => {
   try {
@@ -17,7 +16,7 @@ export const seedDatabase = async (prisma: PrismaClient) => {
         username: "admin",
         password: adminPassword,
         email: process.env.DEFAULT_ADMIN_EMAIL as string,
-        role: USER_ROLES.ADMIN,
+        role: UserRole.admin,
       },
     });
     logger.info("Database seeded successfully");

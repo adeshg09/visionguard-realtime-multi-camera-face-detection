@@ -50,7 +50,7 @@ const AppSidebar: React.FC<React.ComponentProps<typeof Sidebar>> = ({
               to={ROOT_PATH}
               className="w-full flex items-center justify-center"
             >
-              <img src={AppLogoName} alt="App Logo" className="h-8" />
+              <img src={AppLogoName} alt="App Logo" className="h-6" />
             </Link>
             <SidebarTrigger />
           </SidebarMenuItem>

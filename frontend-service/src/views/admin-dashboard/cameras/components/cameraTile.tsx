@@ -7,6 +7,9 @@ import {
   AlertTriangle,
   Zap,
   Loader2,
+  Power,
+  Eye,
+  Gauge,
 } from "lucide-react";
 
 /* Local Imports */
@@ -16,11 +19,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import WebRTCPlayer from "@/components/videoPlayer/WebRTCPlayer";
+import { useCamera } from "@/hooks/dashboard/use-camera";
 import { cn } from "@/lib/utils";
 
 // ----------------------------------------------------------------------
@@ -54,14 +66,26 @@ const CameraTile = ({
 }: CameraTileProps): JSX.Element => {
   /* States */
   const [isHovered, setIsHovered] = useState(false);
+  const [faceDetectionEnabled, setFaceDetectionEnabled] = useState(
+    camera.faceDetectionEnabled || false
+  );
+  const [frameSkipInterval, setFrameSkipInterval] = useState(
+    camera.frameSkipInterval || 1
+  );
+
+  /* Hooks */
+  const { toggleFaceDetectionMutation, updateFrameSkipIntervalMutation } =
+    useCamera();
 
   /* Constants */
   const isStreaming = camera.isOnline;
+  const isActive = camera.isActive;
   const isStarting = isLoading && !isStreaming;
   const isStopping = isLoading && isStreaming;
-  const webrtcUrl = camera.streamUrls?.webrtcUrl;
+  const webrtcUrl = camera?.webrtcUrl;
 
-  console.log("webrtcurl", webrtcUrl);
+  // Frame skip interval options
+  const frameSkipOptions = [1, 2, 3, 5, 10];
 
   // Mock alerts data - replace with actual data from your API
   const mockAlerts = [
@@ -94,9 +118,24 @@ const CameraTile = ({
     }
   };
 
-  const handleSnapshot = (): void => {
-    // TODO: Implement snapshot functionality
-    console.log("Take snapshot for camera:", camera.id);
+  const handleToggleFaceDetection = async (enabled: boolean): Promise<void> => {
+    await toggleFaceDetectionMutation.mutateAsync({
+      cameraId: camera.id,
+      reqData: {
+        enabled: enabled,
+      },
+    });
+    setFaceDetectionEnabled(enabled);
+  };
+
+  const handleUpdateFrameSkipInterval = async (
+    frameSkipInterval: number
+  ): Promise<void> => {
+    await updateFrameSkipIntervalMutation.mutateAsync({
+      cameraId: camera.id,
+      reqData: { frameSkipInterval: frameSkipInterval },
+    });
+    setFrameSkipInterval(frameSkipInterval);
   };
 
   /* Output */
@@ -107,20 +146,85 @@ const CameraTile = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header with Camera Name and Status */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-gradient-to-r from-card to-card/80 bg-primary-500">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div
-            className={cn(
-              "w-2 h-2 rounded-full",
-              isStreaming ? "bg-red-500 animate-pulse" : "bg-muted-foreground"
-            )}
-          />
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-gradient-to-r from-card to-card/80">
+        <div className="flex items-center gap-2 flex-1">
+          {/* Camera Active Status Indicator */}
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full transition-all duration-300",
+                isActive
+                  ? "bg-emerald-500 animate-pulse"
+                  : "bg-muted-foreground/50"
+              )}
+              title={isActive ? "Camera Active" : "Camera Inactive"}
+            />
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full transition-all duration-300",
+                isStreaming ? "bg-red-500 animate-pulse" : "bg-muted-foreground"
+              )}
+              title={isStreaming ? "Streaming Live" : "Stream Offline"}
+            />
+          </div>
+
+          {/* Camera Name */}
           <h3 className="font-semibold text-sm truncate text-foreground">
             {camera.name}
           </h3>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Camera Active Status Badge */}
+          <Badge
+            variant="outline"
+            className={cn(
+              "font-medium text-xs px-2 py-0 h-5 transition-all duration-300",
+              isActive
+                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                : "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/20"
+            )}
+          >
+            <div className="flex items-center gap-1">
+              <Power
+                className={cn(
+                  "w-3 h-3 transition-all duration-300",
+                  isActive ? "text-emerald-600" : "text-muted-foreground"
+                )}
+              />
+              {isActive ? "Active" : "Inactive"}
+            </div>
+          </Badge>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-gradient-to-r from-card to-card/80">
+        <div className="flex items-center gap-2  flex-1">
+          {/* Face Detection Badge */}
+          {faceDetectionEnabled && (
+            <Badge
+              variant="outline"
+              className="ml-2 bg-blue-500/10 text-blue-600 border-blue-500/20 text-xs"
+            >
+              <Eye className="w-3 h-3 mr-1" />
+              Face Detection
+            </Badge>
+          )}
+
+          {/* Frame Skip Badge */}
+          {isStreaming && (
+            <Badge
+              variant="outline"
+              className="bg-green-500/10 text-green-600 border-green-500/20 text-xs"
+            >
+              <Gauge className="w-3 h-3 mr-1" />
+              Skip: {frameSkipInterval}
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Streaming Status Badge */}
           <Badge
             variant={isStreaming ? "default" : "secondary"}
             className={cn(
@@ -142,7 +246,7 @@ const CameraTile = ({
         </div>
       </div>
 
-      {/* Section 2: Video Stream */}
+      {/* Video Stream Section*/}
       <div className="relative aspect-video bg-gradient-to-br from-muted/30 to-muted/10 border-b border-border/50">
         {isStreaming ? (
           <>
@@ -207,10 +311,12 @@ const CameraTile = ({
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-foreground">
-                    Stream Offline
+                    {isActive ? "Stream Offline" : "Camera Inactive"}
                   </p>
                   <p className="text-xs text-muted-foreground max-w-xs">
-                    Start the stream to view live footage
+                    {isActive
+                      ? "Start the stream to view live footage"
+                      : "Camera is inactive and cannot stream"}
                   </p>
                 </div>
               </div>
@@ -219,7 +325,7 @@ const CameraTile = ({
         )}
       </div>
 
-      {/* Section 3: Alerts Section */}
+      {/* Alerts Section */}
       <div className="px-4 py-3 border-b border-border/50 bg-gradient-to-r from-card/50 to-card/30">
         <div className="flex items-center gap-2 mb-2">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -267,18 +373,20 @@ const CameraTile = ({
         </div>
       </div>
 
-      {/* Section 4: Action Buttons */}
+      {/* Action Buttons Section */}
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-card to-card/80">
         {/* Left: Stream Control Button */}
         <Button
           onClick={handleStreamToggle}
           size="sm"
-          disabled={isLoading}
+          disabled={isLoading || !isActive} // Disable if camera is inactive
           variant={isStreaming ? "outline" : "default"}
           className={cn(
             "font-medium transition-all duration-200 min-w-20",
             isStreaming
               ? "border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              : !isActive
+              ? "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
               : "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
           )}
           leftIcon={
@@ -291,7 +399,9 @@ const CameraTile = ({
             )
           }
         >
-          {isLoading
+          {!isActive
+            ? "Inactive"
+            : isLoading
             ? "Loading..."
             : isStreaming
             ? "Stop Stream"
@@ -310,17 +420,114 @@ const CameraTile = ({
               <Settings className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuContent align="start" className="w-56">
+            {/* Basic Actions */}
             <DropdownMenuItem onClick={() => onEdit(camera)}>
               Edit Camera
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            {/* Face Detection Toggle */}
+            <DropdownMenuLabel className="flex items-center justify-between px-2 py-1.5">
+              <span className="flex items-center gap-2 text-xs">
+                <Eye className="w-4 h-4" />
+                Face Detection
+              </span>
+              <Switch
+                checked={faceDetectionEnabled}
+                onCheckedChange={handleToggleFaceDetection}
+                disabled={
+                  toggleFaceDetectionMutation?.isPending || !isStreaming
+                }
+                className={cn(
+                  toggleFaceDetectionMutation?.isPending &&
+                    "opacity-50 cursor-not-allowed"
+                )}
+              />
+            </DropdownMenuLabel>
+
+            {/* Frame Skip Interval */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger
+                disabled={
+                  toggleFaceDetectionMutation?.isPending || !isStreaming
+                }
+                className="flex items-center gap-2 text-xs"
+              >
+                <Gauge className="w-4 h-4" />
+                <span>Frame Skip</span>
+                {updateFrameSkipIntervalMutation?.isPending && (
+                  <Loader2 className="w-3 h-3 animate-spin ml-auto" />
+                )}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuLabel className="flex items-center justify-between text-xs">
+                  <span>Current: {frameSkipInterval}</span>
+                  <span className="text-muted-foreground">1-10</span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {/* Slider for precise control */}
+                <div className="px-3 py-2">
+                  <div className="space-y-3">
+                    <Slider
+                      value={[frameSkipInterval]}
+                      onValueChange={(value) =>
+                        handleUpdateFrameSkipInterval(value[0])
+                      }
+                      max={10}
+                      min={1}
+                      step={1}
+                      className="w-full"
+                      disabled={
+                        updateFrameSkipIntervalMutation?.isPending ||
+                        !isStreaming
+                      }
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>1 (Max Quality)</span>
+                      <span>10 (Max Speed)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <DropdownMenuSeparator />
+
+                {/* Quick presets */}
+                <DropdownMenuLabel className="text-xs px-2 py-1.5">
+                  Quick Presets
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={frameSkipInterval.toString()}
+                  onValueChange={(value) =>
+                    handleUpdateFrameSkipInterval(parseInt(value))
+                  }
+                >
+                  {frameSkipOptions.map((interval) => (
+                    <DropdownMenuRadioItem
+                      key={interval}
+                      value={interval.toString()}
+                      disabled={
+                        updateFrameSkipIntervalMutation?.isPending ||
+                        !isStreaming
+                      }
+                      className="text-xs"
+                    >
+                      {interval} {interval === 1 ? "frame" : "frames"}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSeparator />
+
+            {/* Stream Control */}
             <DropdownMenuItem
-              onClick={handleSnapshot}
-              disabled={!isStreaming || isLoading}
+              onClick={handleStreamToggle}
+              disabled={isLoading || !isActive}
             >
-              Take Snapshot
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleStreamToggle} disabled={isLoading}>
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -332,7 +539,10 @@ const CameraTile = ({
                 "Start Stream"
               )}
             </DropdownMenuItem>
+
             <DropdownMenuSeparator />
+
+            {/* Delete Camera */}
             <DropdownMenuItem
               onClick={() => onDelete(camera.id)}
               className="text-destructive focus:text-destructive"

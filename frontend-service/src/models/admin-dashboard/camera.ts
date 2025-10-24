@@ -9,6 +9,7 @@ export const CameraFormSchema = z.object({
   txtDescription: z.string().max(500).optional(),
   txtResolution: z.string().optional(),
   txtFps: z.number().min(1).max(60).optional(),
+  chkIsActive: z.boolean().optional(),
 });
 
 export type CameraFormValues = z.infer<typeof CameraFormSchema>;

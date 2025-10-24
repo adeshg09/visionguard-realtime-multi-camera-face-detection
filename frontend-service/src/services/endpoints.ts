@@ -15,5 +15,8 @@ export const ADMIN_DASHBOARD_ENDPOINTS = {
     DELETE_CAMERA: "/cameras/delete-camera/:cameraId",
     START_CAMERA_STREAM: "/cameras/start-stream/:cameraId",
     STOP_CAMERA_STREAM: "/cameras/stop-stream/:cameraId",
+    GET_STREAM_STATUS: "/cameras/get-stream-status/:cameraId",
+    TOGGLE_FACE_DETECTION: "/cameras/toggle-face-detection/:cameraId",
+    UPDATE_FRAME_SKIP_INTERVAL: "/cameras/update-frame-skip-interval/:cameraId",
   },
 };
