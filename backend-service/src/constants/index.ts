@@ -35,6 +35,7 @@ export const USER_ROLES = {
 
 export const RESPONSE_SUCCESS_MESSAGES = {
   LOGIN_SUCCESS: "Login successful",
+  USER_INFO_FETCHED: "User information fetched successfully",
   CAMERA_CREATED: "Camera created successfully",
   CAMERA_UPDATED: "Camera updated successfully",
   CAMERA_DELETED: "Camera deleted successfully",

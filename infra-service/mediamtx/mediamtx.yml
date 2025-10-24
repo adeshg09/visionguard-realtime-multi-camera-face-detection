@@ -42,101 +42,26 @@ runOnDisconnect:
 ###############################################
 # Global settings -> Authentication
 
-# Authentication method. Available values are:
-# * internal: credentials are stored in the configuration file
-# * http: an external HTTP URL is contacted to perform authentication
-# * jwt: an external identity server provides authentication through JWTs
+# Minimal authentication - allow everything
 authMethod: internal
-
-# Internal authentication.
-# list of users.
 authInternalUsers:
-  # Default unprivileged user.
-  # Username. 'any' means any user, including anonymous ones.
+  # Allow any user (including anonymous) to publish, read, and playback
   - user: any
-    # Password. Not used in case of 'any' user.
     pass:
-    # IPs or networks allowed to use this user. An empty list means any IP.
-    ips: []
-    # List of permissions.
+    ips: [] # Empty list means ANY IP can connect
     permissions:
-      # Available actions are: publish, read, playback, api, metrics, pprof.
       - action: publish
-        # Paths can be set to further restrict access to a specific path.
-        # An empty path means any path.
-        # Regular expressions can be used by using a tilde as prefix.
         path:
       - action: read
         path:
       - action: playback
         path:
-
-    # Default administrator.
-    # This allows to use API, metrics and PPROF without authentication,
-    # if the IP is localhost.
-  - user: any
-    pass:
-    ips: ["127.0.0.1", "::1"]
-    permissions:
       - action: api
+        path:
       - action: metrics
+        path:
       - action: pprof
-
-# HTTP-based authentication.
-# URL called to perform authentication. Every time a user wants
-# to authenticate, the server calls this URL with the POST method
-# and a body containing:
-# {
-#   "user": "user",
-#   "password": "password",
-#   "token": "token",
-#   "ip": "ip",
-#   "action": "publish|read|playback|api|metrics|pprof",
-#   "path": "path",
-#   "protocol": "rtsp|rtmp|hls|webrtc|srt",
-#   "id": "id",
-#   "query": "query"
-# }
-# If the response code is 20x, authentication is accepted, otherwise
-# it is discarded.
-authHTTPAddress:
-# Actions to exclude from HTTP-based authentication.
-# Format is the same as the one of user permissions.
-authHTTPExclude:
-  - action: api
-  - action: metrics
-  - action: pprof
-
-# JWT-based authentication.
-# Users have to login through an external identity server and obtain a JWT.
-# This JWT must contain the claim "mediamtx_permissions" with permissions,
-# for instance:
-# {
-#  "mediamtx_permissions": [
-#     {
-#       "action": "publish",
-#       "path": "somepath"
-#     }
-#   ]
-# }
-# Users are expected to pass the JWT in the Authorization header or as password.
-# This is the JWKS URL that will be used to pull (once) the public key that allows
-# to validate JWTs.
-authJWTJWKS:
-# If the JWKS URL has a self-signed or invalid certificate,
-# you can provide the fingerprint of the certificate in order to
-# validate it anyway. It can be obtained by running:
-# openssl s_client -connect jwt_jwks_domain:443 </dev/null 2>/dev/null | sed -n '/BEGIN/,/END/p' > server.crt
-# openssl x509 -in server.crt -noout -fingerprint -sha256 | cut -d "=" -f2 | tr -d ':'
-authJWTJWKSFingerprint:
-# name of the claim that contains permissions.
-authJWTClaimKey: mediamtx_permissions
-# Actions to exclude from JWT-based authentication.
-# Format is the same as the one of user permissions.
-authJWTExclude: []
-# allow passing the JWT through query parameters of HTTP requests (i.e. ?jwt=JWT).
-# This is a security risk and will be disabled by default in the future.
-authJWTInHTTPQuery: true
+        path:
 
 ###############################################
 # Global settings -> Control API

@@ -1,7 +1,5 @@
 /* Imports */
 import { useCallback, useEffect, useState, type JSX } from "react";
-
-/* Relative Imports */
 import { useNavigate } from "react-router-dom";
 
 /* Local Imports */
@@ -34,6 +32,7 @@ const ManageCamera = (): JSX.Element => {
 
   /* States */
   const [cameras, setCameras] = useState<any[]>([]);
+  const [loadingCameras, setLoadingCameras] = useState<Set<string>>(new Set());
 
   /* Functions */
   /**
@@ -43,10 +42,7 @@ const ManageCamera = (): JSX.Element => {
    */
   const handleGetCameras = useCallback(async (): Promise<void> => {
     const response = await getAllCamerasMutation.mutateAsync();
-
-    if (response?.status?.response_code === 200 && response.data?.cameras) {
-      setCameras(response.data.cameras);
-    }
+    setCameras(response.data.cameras);
   }, [getAllCamerasMutation]);
 
   /**
@@ -76,23 +72,32 @@ const ManageCamera = (): JSX.Element => {
    */
   const handleStartStream = async (cameraId: string): Promise<void> => {
     try {
+      // Add this camera to loading state
+      setLoadingCameras((prev) => new Set(prev).add(cameraId));
+
       const response = await startCameraStreamMutation.mutateAsync(cameraId);
 
-      if (response?.data?.webrtcUrl) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        setCameras((prev) =>
-          prev.map((cam) =>
-            cam.id === cameraId
-              ? {
-                  ...cam,
-                  webrtcUrl: response.data.webrtcUrl,
-                }
-              : cam
-          )
-        );
-      }
+      console.log("handleStartStream response", response);
+
+      setCameras((prev) =>
+        prev.map((cam) =>
+          cam.id === cameraId
+            ? {
+                ...response.data.camera,
+                streamUrls: response.data.streamUrls,
+              }
+            : cam
+        )
+      );
     } catch (error) {
       console.error("Failed to start stream:", error);
+    } finally {
+      // Remove this camera from loading state
+      setLoadingCameras((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(cameraId);
+        return newSet;
+      });
     }
   };
 
@@ -104,15 +109,23 @@ const ManageCamera = (): JSX.Element => {
    */
   const handleStopStream = async (cameraId: string): Promise<void> => {
     try {
-      await stopCameraStreamMutation.mutateAsync(cameraId);
+      // Add this camera to loading state
+      setLoadingCameras((prev) => new Set(prev).add(cameraId));
+
+      const response = await stopCameraStreamMutation.mutateAsync(cameraId);
 
       setCameras((prev) =>
-        prev.map((cam) =>
-          cam.id === cameraId ? { ...cam, webrtcUrl: undefined } : cam
-        )
+        prev.map((cam) => (cam?.id === cameraId ? response.data.camera : cam))
       );
     } catch (error) {
       console.error("Failed to stop stream:", error);
+    } finally {
+      // Remove this camera from loading state
+      setLoadingCameras((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(cameraId);
+        return newSet;
+      });
     }
   };
 
@@ -131,6 +144,10 @@ const ManageCamera = (): JSX.Element => {
   useEffect(() => {
     handleGetCameras();
   }, []);
+
+  useEffect(() => {
+    console.log("cameras", cameras);
+  }, [cameras]);
 
   /* Output */
   return (
@@ -151,8 +168,7 @@ const ManageCamera = (): JSX.Element => {
           onDeleteCamera={handleDeleteCamera}
           onStartStream={handleStartStream}
           onStopStream={handleStopStream}
-          isStartingStream={startCameraStreamMutation.isPending}
-          isStoppingStream={stopCameraStreamMutation.isPending}
+          loadingCameras={loadingCameras}
         />
       )}
     </AdminDashboardPage>

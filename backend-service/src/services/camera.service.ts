@@ -121,24 +121,36 @@ export const createCameraService = (prisma: PrismaClient) => {
     }
   };
 
-  const updateCameraStatus = async (
-    id: string,
-    isActive: boolean,
-    isOnline?: boolean
-  ): Promise<void> => {
+  const updateCameraActiveStatus = async (id: string, isActive: boolean) => {
     try {
       await prisma.camera.update({
         where: { id },
         data: {
           isActive,
-          ...(isOnline !== undefined && { isOnline }),
           updatedAt: new Date(),
         },
       });
 
-      logger.info(
-        `Camera ${id} status updated: active=${isActive}, online=${isOnline}`
-      );
+      logger.info(`Camera ${id} status updated: active=${isActive}`);
+    } catch (error) {
+      logger.error("Update camera status error:", error);
+      throw error;
+    }
+  };
+
+  const updateCameraOnlineStatus = async (id: string, isOnline: boolean) => {
+    try {
+      const updatedCamera = await prisma.camera.update({
+        where: { id },
+        data: {
+          isOnline,
+          updatedAt: new Date(),
+        },
+      });
+
+      logger.info(`Camera ${id} status updated: online=${isOnline}`);
+
+      return updatedCamera;
     } catch (error) {
       logger.error("Update camera status error:", error);
       throw error;
@@ -151,6 +163,7 @@ export const createCameraService = (prisma: PrismaClient) => {
     getCameraById,
     updateCamera,
     deleteCamera,
-    updateCameraStatus,
+    updateCameraActiveStatus,
+    updateCameraOnlineStatus,
   };
 };

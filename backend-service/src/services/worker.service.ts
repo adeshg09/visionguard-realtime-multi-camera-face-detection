@@ -32,32 +32,38 @@ export const createWorkerService = () => {
   };
 
   const startStream = async (camera: CameraResponse) => {
-    const result = await makeWorkerRequest(`/cameras/start-stream`, {
+    const response = await makeWorkerRequest(`/cameras/start-stream`, {
       method: "POST",
       data: {
         cameraId: camera.id,
-        rtspUrl: camera.rtspUrl,
         name: camera.name,
+        rtspUrl: camera.rtspUrl,
+        location: camera.location,
+        resolution: camera.resolution,
         fps: camera.fps,
       },
     });
 
-    return result;
+    return response;
   };
 
   const stopStream = async (cameraId: string) => {
-    return makeWorkerRequest("/cameras/stop-stream", {
+    const response = await makeWorkerRequest("/cameras/stop-stream", {
       method: "POST",
       data: {
         cameraId,
       },
     });
+
+    return response;
   };
 
   const getStreamStatus = async (cameraId: string) => {
-    return makeWorkerRequest(`/camera/${cameraId}/status`, {
+    const response = await makeWorkerRequest(`/camera/${cameraId}/status`, {
       method: "GET",
     });
+
+    return response;
   };
 
   return {

@@ -21,8 +21,8 @@ export const createAuthController = (prisma: PrismaClient) => {
       return successResponse(
         c,
         STATUS_CODES.OK,
+        RESPONSE_MESSAGES.SUCCESS,
         RESPONSE_SUCCESS_MESSAGES.LOGIN_SUCCESS,
-        "Login successful",
         result
       );
     } catch (error) {
@@ -45,7 +45,7 @@ export const createAuthController = (prisma: PrismaClient) => {
         c,
         STATUS_CODES.OK,
         RESPONSE_MESSAGES.SUCCESS,
-        "User information retrieved successfully",
+        RESPONSE_SUCCESS_MESSAGES.USER_INFO_FETCHED,
         profile
       );
     } catch (error) {

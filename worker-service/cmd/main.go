@@ -66,14 +66,8 @@ func main() {
 		api.POST("/cameras/start-stream", cameraHandler.StartStream)
 		api.POST("/cameras/stop-stream", cameraHandler.StopStream)
 		api.GET("/cameras/:id/status", cameraHandler.GetStreamStatus)
-		api.GET("/cameras/streams/all", cameraHandler.GetAllStreams)
-
-		api.GET("/cameras/:id/stats", cameraHandler.GetStreamStats)
 		api.POST("/cameras/:id/toggle-face-detection", cameraHandler.ToggleFaceDetection)
 		api.POST("/cameras/:id/frame-skip-interval", cameraHandler.UpdateFrameSkipInterval)
-		api.GET("/cameras/:id/metrics", cameraHandler.GetCameraMetrics)
-		api.GET("/metrics", cameraHandler.GetAllMetrics)
-		api.GET("/performance", cameraHandler.GetPerformanceStats)
 
 	}
 

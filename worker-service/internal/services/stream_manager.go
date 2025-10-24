@@ -37,7 +37,6 @@ const (
 
 // ==================== STREAM SESSION ====================
 
-// StreamSession represents an active camera stream
 type StreamSession struct {
 	// Identity
 	CameraID string
@@ -47,38 +46,29 @@ type StreamSession struct {
 	Status    models.StreamStatus
 	StartTime time.Time
 
-	// Metrics
-	FrameCount    int64
-	LastFrameTime time.Time
-	ErrorCount    int
-	LastError     error
-
 	// Control channels
-	Reconnect chan bool
-	Stop      chan bool
-	Done      chan bool
+	Stop chan bool
+	Done chan bool
 
 	// Processing pipeline
 	inputFFmpeg  *FFmpegProcess
 	outputFFmpeg *FFmpegProcess
-	frameDecoder *FrameDecoder
 	faceDetector *FaceDetectionEngine
 	overlay      *OverlayRenderer
-	perfMonitor  *PerformanceOptimizer
 
 	// Configuration
 	faceDetectionEnabled bool
+	frameSkipInterval    int // Process every Nth frame
 }
 
 // ==================== FFMPEG WRAPPER ====================
 
-// FFmpegProcess wraps an FFmpeg process for cleaner management
 type FFmpegProcess struct {
 	cmd         *exec.Cmd
 	stdinPipe   io.WriteCloser
 	stdoutPipe  io.ReadCloser
 	streamID    string
-	processType string // "input" or "output"
+	processType string
 }
 
 func (fp *FFmpegProcess) Start() error {
@@ -94,7 +84,7 @@ func (fp *FFmpegProcess) Kill() error {
 
 func (fp *FFmpegProcess) IsRunning() bool {
 	if fp.cmd == nil || fp.cmd.ProcessState == nil {
-		return true // Not started yet or still running
+		return true
 	}
 	return !fp.cmd.ProcessState.Exited()
 }
@@ -112,20 +102,22 @@ func (fp *FFmpegProcess) Close() {
 // ==================== STREAM MANAGER ====================
 
 type StreamManager struct {
-	// Core
-	sessions             map[string]*StreamSession
-	sessionsMutex        sync.RWMutex
-	maxConcurrentStreams int
-	mediamtxClient       *MediaMTXClient
-
-	// Statistics
-	startTime            time.Time
-	totalProcessedFrames int64
-	totalDetectedFaces   int64
-	statsMutex           sync.Mutex
-
-	// Configuration
+	sessions               map[string]*StreamSession
+	sessionsMutex          sync.RWMutex
+	maxConcurrentStreams   int
+	mediamtxClient         *MediaMTXClient
 	faceDetectionModelPath string
+}
+
+// StartStreamResponse is the response for starting a stream
+type StartStreamResponse struct {
+	CameraID     string `json:"cameraId"`
+	StreamID     string `json:"streamId"`
+	MediaMTXPath string `json:"mediamtxPath"`
+	WebRTCUrl    string `json:"webrtcUrl"`
+	HLSUrl       string `json:"hlsUrl"`
+	RTSPUrl      string `json:"rtspUrl"`
+	RTMPUrl      string `json:"rtmpUrl"`
 }
 
 // ==================== INITIALIZATION ====================
@@ -135,11 +127,15 @@ func NewStreamManager(maxConcurrentStreams int, mediamtxClient *MediaMTXClient) 
 		sessions:               make(map[string]*StreamSession),
 		maxConcurrentStreams:   maxConcurrentStreams,
 		mediamtxClient:         mediamtxClient,
-		startTime:              time.Now(),
 		faceDetectionModelPath: findFaceDetectionModel(),
 	}
 
-	sm.validateFaceDetectionModel()
+	if sm.faceDetectionModelPath == "" {
+		utils.GetLogger().Warn("Face detection model not found - feature disabled")
+	} else {
+		utils.GetLogger().Infof("Face detection model found at %s", sm.faceDetectionModelPath)
+	}
+
 	return sm
 }
 
@@ -161,20 +157,9 @@ func findFaceDetectionModel() string {
 	return ""
 }
 
-func (sm *StreamManager) validateFaceDetectionModel() {
-	logger := utils.GetLogger()
+// ==================== START STREAM ====================
 
-	if sm.faceDetectionModelPath == "" {
-		logger.Warn("Face detection model not found - feature disabled")
-		return
-	}
-
-	logger.Infof("Face detection model found at %s", sm.faceDetectionModelPath)
-}
-
-// ==================== STREAM LIFECYCLE ====================
-
-func (sm *StreamManager) StartStream(req *models.StartStreamRequest) (*models.StartStreamResponse, error) {
+func (sm *StreamManager) StartStream(req *models.StartStreamRequest) (*StartStreamResponse, error) {
 	logger := utils.GetLogger()
 
 	// Validation
@@ -183,25 +168,45 @@ func (sm *StreamManager) StartStream(req *models.StartStreamRequest) (*models.St
 	}
 
 	// Create session
-	session := sm.createStreamSession(req)
+	session := &StreamSession{
+		CameraID: req.CameraID,
+		Camera: &models.Camera{
+			ID:         req.CameraID,
+			Name:       req.Name,
+			RTSPUrl:    req.RTSPUrl,
+			Location:   req.Location,
+			Resolution: req.Resolution,
+			FPS:        req.FPS,
+		},
+		Status:               models.StreamStatusConnecting,
+		StartTime:            time.Now(),
+		Stop:                 make(chan bool, 1),
+		Done:                 make(chan bool, 1),
+		faceDetector:         NewFaceDetectionEngine(req.CameraID, sm.faceDetectionModelPath, 0.85),
+		overlay:              NewOverlayRenderer(req.CameraID),
+		faceDetectionEnabled: len(sm.faceDetectionModelPath) > 0,
+		frameSkipInterval:    2, // Process every 2nd frame by default
+	}
 
-	// Initialize components
-	if err := sm.initializeSessionComponents(session); err != nil {
-		return nil, fmt.Errorf("failed to initialize session: %w", err)
+	// Initialize face detection if available
+	if session.faceDetectionEnabled {
+		if err := session.faceDetector.Initialize(); err != nil {
+			logger.Warnf("Face detection disabled for camera %s: %v", session.CameraID, err)
+			session.faceDetectionEnabled = false
+		}
 	}
 
 	// Register and start
 	sm.registerSession(session)
 	go sm.runStreamSession(session)
 
-	// Wait for connection
-	if err := sm.waitForStreamConnection(session, connectionTimeout); err != nil {
-		sm.unregisterSession(req.CameraID)
-		return nil, err
+	// Wait for stream to be actually accessible
+	if err := sm.verifyStreamIsLive(session.CameraID, 15, 2*time.Second); err != nil {
+		sm.cleanupFailedSession(session)
+		return nil, fmt.Errorf("stream failed to start: %v", err)
 	}
 
-	logger.Infof("Stream started: camera=%s, faceDetection=%v",
-		req.Name, session.faceDetectionEnabled)
+	logger.Infof("Stream started and verified live: camera=%s, faceDetection=%v", req.Name, session.faceDetectionEnabled)
 
 	return sm.buildStreamResponse(req, session), nil
 }
@@ -221,36 +226,86 @@ func (sm *StreamManager) validateStreamStart(cameraID string) error {
 	return nil
 }
 
-func (sm *StreamManager) createStreamSession(req *models.StartStreamRequest) *StreamSession {
-	return &StreamSession{
-		CameraID:  req.CameraID,
-		Camera:    &models.Camera{ID: req.CameraID, Name: req.Name, RTSPUrl: req.RTSPUrl, FPS: req.FPS},
-		Status:    models.StreamStatusConnecting,
-		StartTime: time.Now(),
-		Reconnect: make(chan bool, 1),
-		Stop:      make(chan bool, 1),
-		Done:      make(chan bool, 1),
+// verifyStreamIsLive checks if the stream is actually available on MediaMTX
+func (sm *StreamManager) verifyStreamIsLive(cameraID string, maxAttempts int, retryDelay time.Duration) error {
+	logger := utils.GetLogger()
+	mediaPath := fmt.Sprintf("camera_%s", cameraID)
 
-		frameDecoder:         NewFrameDecoder(req.CameraID, 10, 2),
-		faceDetector:         NewFaceDetectionEngine(req.CameraID, sm.faceDetectionModelPath, 0.85),
-		overlay:              NewOverlayRenderer(req.CameraID),
-		perfMonitor:          NewPerformanceOptimizer(req.CameraID, req.FPS, 100),
-		faceDetectionEnabled: len(sm.faceDetectionModelPath) > 0,
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		logger.Infof("Verifying stream for camera %s (attempt %d/%d)", cameraID, attempt, maxAttempts)
+
+		// Check if stream session is still active
+		session, err := sm.getSession(cameraID)
+		if err != nil {
+			return fmt.Errorf("stream session not found")
+		}
+
+		if session.Status == models.StreamStatusError {
+			return fmt.Errorf("stream entered error state")
+		}
+
+		// Check FFmpeg processes
+		if session.inputFFmpeg != nil && !session.inputFFmpeg.IsRunning() {
+			return fmt.Errorf("input FFmpeg process died")
+		}
+		if session.outputFFmpeg != nil && !session.outputFFmpeg.IsRunning() {
+			return fmt.Errorf("output FFmpeg process died")
+		}
+
+		// Method 1: Check if RTMP is actively publishing
+		isPublishing, _ := sm.mediamtxClient.IsPathPublishing(mediaPath)
+		if isPublishing {
+			logger.Infof("✓ Stream verified - RTMP publisher active for camera %s", cameraID)
+			return nil
+		}
+
+		// Method 2: Try to get path info
+		pathInfo, err := sm.mediamtxClient.GetPathInfo(mediaPath)
+		if err == nil && pathInfo != nil && pathInfo.Ready && pathInfo.HasVideoTrack() {
+			logger.Infof("✓ Stream verified - path ready with video tracks for camera %s", cameraID)
+			return nil
+		}
+
+		// Method 3: Check if path exists in list (after attempt 6)
+		if attempt >= 6 {
+			exists, _ := sm.mediamtxClient.PathExists(mediaPath)
+			if exists {
+				logger.Infof("✓ Stream verified - path exists in list for camera %s", cameraID)
+				return nil
+			}
+		}
+
+		// Wait before retry
+		if attempt < maxAttempts {
+			time.Sleep(retryDelay)
+		}
 	}
+
+	return fmt.Errorf("stream did not become available after %d attempts", maxAttempts)
 }
 
-func (sm *StreamManager) initializeSessionComponents(session *StreamSession) error {
-	if !session.faceDetectionEnabled {
-		return nil
+// cleanupFailedSession cleans up a session that failed to start
+func (sm *StreamManager) cleanupFailedSession(session *StreamSession) {
+	logger := utils.GetLogger()
+	logger.Warnf("Cleaning up failed session for camera %s", session.CameraID)
+
+	if session.faceDetector != nil {
+		session.faceDetector.Close()
+	}
+	if session.inputFFmpeg != nil {
+		session.inputFFmpeg.Close()
+	}
+	if session.outputFFmpeg != nil {
+		session.outputFFmpeg.Close()
 	}
 
-	if err := session.faceDetector.Initialize(); err != nil {
-		utils.GetLogger().Warnf("Face detection disabled for camera %s: %v",
-			session.CameraID, err)
-		session.faceDetectionEnabled = false
+	// Signal stop
+	select {
+	case session.Stop <- true:
+	default:
 	}
 
-	return nil
+	sm.unregisterSession(session.CameraID)
 }
 
 func (sm *StreamManager) registerSession(session *StreamSession) {
@@ -265,26 +320,11 @@ func (sm *StreamManager) unregisterSession(cameraID string) {
 	sm.sessionsMutex.Unlock()
 }
 
-func (sm *StreamManager) waitForStreamConnection(session *StreamSession, timeout time.Duration) error {
-	time.Sleep(timeout)
-
-	sm.sessionsMutex.RLock()
-	status := session.Status
-	sm.sessionsMutex.RUnlock()
-
-	if status == models.StreamStatusError {
-		return fmt.Errorf("connection failed")
-	}
-
-	return nil
-}
-
-func (sm *StreamManager) buildStreamResponse(req *models.StartStreamRequest, session *StreamSession) *models.StartStreamResponse {
+func (sm *StreamManager) buildStreamResponse(req *models.StartStreamRequest, session *StreamSession) *StartStreamResponse {
 	streamID := uuid.New().String()
 	mediaPath := fmt.Sprintf("camera_%s", req.CameraID)
 
-	return &models.StartStreamResponse{
-		Success:      true,
+	return &StartStreamResponse{
 		CameraID:     req.CameraID,
 		StreamID:     streamID,
 		MediaMTXPath: mediaPath,
@@ -292,11 +332,10 @@ func (sm *StreamManager) buildStreamResponse(req *models.StartStreamRequest, ses
 		HLSUrl:       fmt.Sprintf("http://localhost:%d/%s/index.m3u8", mediaMTXHLSPort, mediaPath),
 		RTSPUrl:      fmt.Sprintf("rtsp://localhost:%d/%s", mediaMTXRTSPPort, mediaPath),
 		RTMPUrl:      fmt.Sprintf("rtmp://localhost:%d/%s", mediaMTXRTMPPort, mediaPath),
-		Message:      fmt.Sprintf("Stream started successfully for camera %s", req.Name),
 	}
 }
 
-// ==================== STREAM STOPPING ====================
+// ==================== STOP STREAM ====================
 
 func (sm *StreamManager) StopStream(cameraID string) (*models.StopStreamResponse, error) {
 	logger := utils.GetLogger()
@@ -309,13 +348,28 @@ func (sm *StreamManager) StopStream(cameraID string) (*models.StopStreamResponse
 	logger.Infof("Stopping stream for camera %s", cameraID)
 
 	// Cleanup resources
-	sm.cleanupSession(session)
+	if session.faceDetector != nil {
+		session.faceDetector.Close()
+	}
+	if session.inputFFmpeg != nil {
+		session.inputFFmpeg.Close()
+	}
+	if session.outputFFmpeg != nil {
+		session.outputFFmpeg.Close()
+	}
 
 	// Signal stop
-	sm.signalStop(session)
+	select {
+	case session.Stop <- true:
+	default:
+	}
 
 	// Wait for completion
-	sm.waitForSessionCompletion(session, stopTimeout)
+	select {
+	case <-session.Done:
+	case <-time.After(stopTimeout):
+		logger.Warnf("Stream stop timeout for camera %s", cameraID)
+	}
 
 	// Unregister
 	sm.unregisterSession(cameraID)
@@ -323,9 +377,7 @@ func (sm *StreamManager) StopStream(cameraID string) (*models.StopStreamResponse
 	logger.Infof("Stream stopped for camera %s", cameraID)
 
 	return &models.StopStreamResponse{
-		Success:  true,
 		CameraID: cameraID,
-		Message:  fmt.Sprintf("Stream stopped successfully for camera %s", cameraID),
 	}, nil
 }
 
@@ -339,36 +391,6 @@ func (sm *StreamManager) getSession(cameraID string) (*StreamSession, error) {
 	}
 
 	return session, nil
-}
-
-func (sm *StreamManager) cleanupSession(session *StreamSession) {
-	if session.frameDecoder != nil {
-		session.frameDecoder.Close()
-	}
-	if session.faceDetector != nil {
-		session.faceDetector.Close()
-	}
-	if session.inputFFmpeg != nil {
-		session.inputFFmpeg.Close()
-	}
-	if session.outputFFmpeg != nil {
-		session.outputFFmpeg.Close()
-	}
-}
-
-func (sm *StreamManager) signalStop(session *StreamSession) {
-	select {
-	case session.Stop <- true:
-	default:
-	}
-}
-
-func (sm *StreamManager) waitForSessionCompletion(session *StreamSession, timeout time.Duration) {
-	select {
-	case <-session.Done:
-	case <-time.After(timeout):
-		utils.GetLogger().Warnf("Stream stop timeout for camera %s", session.CameraID)
-	}
 }
 
 // ==================== STREAM EXECUTION ====================
@@ -390,12 +412,17 @@ func (sm *StreamManager) runStreamSession(session *StreamSession) {
 			if session.Status != models.StreamStatusStreaming {
 				if err := sm.connectAndStream(session); err != nil {
 					reconnectAttempts++
+					logger.Warnf("Connection failed for camera %s (attempt %d): %v",
+						session.CameraID, reconnectAttempts, err)
 
-					if sm.shouldStopReconnecting(session, reconnectAttempts, maxReconnectAttempts) {
+					if reconnectAttempts >= maxReconnectAttempts {
+						logger.Errorf("Max reconnect attempts reached for camera %s", session.CameraID)
+						session.Status = models.StreamStatusError
 						return
 					}
 
-					sm.backoffAndRetry(reconnectAttempts)
+					backoff := time.Duration(reconnectAttempts) * time.Second
+					time.Sleep(backoff)
 					continue
 				}
 
@@ -411,20 +438,6 @@ func (sm *StreamManager) runStreamSession(session *StreamSession) {
 	}
 }
 
-func (sm *StreamManager) shouldStopReconnecting(session *StreamSession, attempts, maxAttempts int) bool {
-	if attempts >= maxAttempts {
-		utils.GetLogger().Errorf("Max reconnect attempts reached for camera %s", session.CameraID)
-		return true
-	}
-	return false
-}
-
-func (sm *StreamManager) backoffAndRetry(attempts int) {
-	backoff := time.Duration(attempts) * time.Second
-	utils.GetLogger().Infof("Retrying in %v", backoff)
-	time.Sleep(backoff)
-}
-
 func (sm *StreamManager) connectAndStream(session *StreamSession) error {
 	logger := utils.GetLogger()
 	logger.Infof("Connecting to RTSP: %s", session.Camera.RTSPUrl)
@@ -432,7 +445,8 @@ func (sm *StreamManager) connectAndStream(session *StreamSession) error {
 	session.Status = models.StreamStatusConnecting
 
 	// Create MediaMTX path
-	if err := sm.createMediaPath(session); err != nil {
+	mediaPath := fmt.Sprintf("camera_%s", session.CameraID)
+	if err := sm.mediamtxClient.CreatePath(mediaPath); err != nil {
 		return err
 	}
 
@@ -448,17 +462,12 @@ func (sm *StreamManager) connectAndStream(session *StreamSession) error {
 	}
 
 	// Verify connection
-	time.Sleep(connectionTimeout)
+	time.Sleep(5 * time.Second)
 	if !session.inputFFmpeg.IsRunning() {
 		return fmt.Errorf("FFmpeg exited immediately")
 	}
 
 	return nil
-}
-
-func (sm *StreamManager) createMediaPath(session *StreamSession) error {
-	mediaPath := fmt.Sprintf("camera_%s", session.CameraID)
-	return sm.mediamtxClient.CreatePath(mediaPath)
 }
 
 // ==================== FFMPEG MANAGEMENT ====================
@@ -581,7 +590,6 @@ func (sm *StreamManager) monitorFFmpegProcess(ffmpeg *FFmpegProcess, session *St
 		if err := ffmpeg.cmd.Wait(); err != nil {
 			logger.Errorf("[%s FFmpeg %s] Process exited: %v",
 				session.CameraID, ffmpeg.processType, err)
-			session.LastError = err
 			session.Status = models.StreamStatusError
 		}
 	}()
@@ -593,8 +601,10 @@ func (sm *StreamManager) processFrames(session *StreamSession) {
 	logger := utils.GetLogger()
 	logger.Infof("Starting frame processing for camera %s", session.CameraID)
 
-	processor := NewFrameProcessor(session, sm)
-	defer processor.Cleanup()
+	frameSize := defaultFrameWidth * defaultFrameHeight * defaultBytesPerPixel
+	frameBuffer := make([]byte, frameSize)
+	consecutiveErrors := 0
+	skipCounter := 0
 
 	for {
 		select {
@@ -603,207 +613,78 @@ func (sm *StreamManager) processFrames(session *StreamSession) {
 			return
 
 		default:
-			if err := processor.ProcessNextFrame(); err != nil {
-				if processor.ShouldStop(err) {
+			// Read frame
+			if session.inputFFmpeg == nil || session.inputFFmpeg.stdoutPipe == nil {
+				logger.Errorf("Input pipe not available for camera %s", session.CameraID)
+				return
+			}
+
+			n, err := io.ReadFull(session.inputFFmpeg.stdoutPipe, frameBuffer)
+			if err != nil {
+				consecutiveErrors++
+				if err == io.EOF {
+					logger.Warnf("Stream ended for camera %s", session.CameraID)
+					return
+				}
+				if consecutiveErrors >= maxConsecutiveErrors {
+					logger.Errorf("Too many errors for camera %s", session.CameraID)
 					session.Status = models.StreamStatusError
 					return
 				}
+				continue
 			}
-		}
-	}
-}
 
-// ==================== FRAME PROCESSOR (HELPER) ====================
+			if n != frameSize {
+				continue
+			}
 
-type FrameProcessor struct {
-	session           *StreamSession
-	manager           *StreamManager
-	frameSize         int
-	frameBuffer       []byte
-	consecutiveErrors int
-	frameCounter      int64
-	skipCounter       int
-}
+			consecutiveErrors = 0
 
-func NewFrameProcessor(session *StreamSession, manager *StreamManager) *FrameProcessor {
-	frameSize := defaultFrameWidth * defaultFrameHeight * defaultBytesPerPixel
+			// Frame skipping
+			skipCounter++
+			if skipCounter%session.frameSkipInterval != 0 {
+				continue
+			}
 
-	return &FrameProcessor{
-		session:     session,
-		manager:     manager,
-		frameSize:   frameSize,
-		frameBuffer: make([]byte, frameSize),
-	}
-}
+			// Convert to Mat
+			mat, err := gocv.NewMatFromBytes(defaultFrameHeight, defaultFrameWidth, gocv.MatTypeCV8UC3, frameBuffer)
+			if err != nil || mat.Empty() {
+				if !mat.Empty() {
+					mat.Close()
+				}
+				continue
+			}
 
-func (fp *FrameProcessor) ProcessNextFrame() error {
-	// Read frame
-	frame, err := fp.readFrame()
-	if err != nil {
-		return err
-	}
+			// Detect faces
+			var detections []models.FaceDetection
+			if session.faceDetectionEnabled && session.faceDetector != nil {
+				detections, _ = session.faceDetector.DetectFaces(mat)
+			}
 
-	// Skip if needed
-	if fp.shouldSkipFrame() {
-		return nil
-	}
+			// Render overlay
+			if session.overlay != nil && session.overlay.IsEnabled() {
+				session.overlay.RenderDetections(
+					&mat,
+					detections,
+					session.Camera.Name,
+					session.Camera.Location,
+					0, // FPS not needed
+					0, // Frame number not needed
+				)
+			}
 
-	// Convert to Mat
-	mat, err := fp.bytesToMat(frame)
-	if err != nil {
-		return nil // Skip bad frames
-	}
-	defer mat.Close()
+			// Write to output
+			if session.outputFFmpeg != nil && session.outputFFmpeg.stdinPipe != nil {
+				rawBytes := mat.ToBytes()
+				session.outputFFmpeg.stdinPipe.Write(rawBytes)
+			}
 
-	// Process frame
-	detections := fp.detectFaces(mat)
-	fp.renderOverlay(mat, detections)
-
-	// Send to output
-	if err := fp.writeToOutput(mat); err != nil {
-		return err
-	}
-
-	// Update metrics
-	fp.updateMetrics(detections)
-
-	return nil
-}
-
-func (fp *FrameProcessor) readFrame() ([]byte, error) {
-	if fp.session.inputFFmpeg == nil || fp.session.inputFFmpeg.stdoutPipe == nil {
-		return nil, fmt.Errorf("input pipe not available")
-	}
-
-	n, err := io.ReadFull(fp.session.inputFFmpeg.stdoutPipe, fp.frameBuffer)
-	if err != nil {
-		fp.consecutiveErrors++
-		return nil, err
-	}
-
-	if n != fp.frameSize {
-		return nil, fmt.Errorf("incomplete frame")
-	}
-
-	fp.consecutiveErrors = 0
-	fp.frameCounter++
-	fp.session.FrameCount = fp.frameCounter
-	fp.session.LastFrameTime = time.Now()
-
-	return fp.frameBuffer, nil
-}
-
-func (fp *FrameProcessor) shouldSkipFrame() bool {
-	interval := 1
-	if fp.session.perfMonitor != nil {
-		interval = fp.session.perfMonitor.GetFrameSkipInterval()
-	}
-
-	fp.skipCounter++
-	if fp.skipCounter%interval != 0 {
-		if fp.session.perfMonitor != nil {
-			fp.session.perfMonitor.RecordFrameDrop()
-		}
-		return true
-	}
-
-	return false
-}
-
-func (fp *FrameProcessor) bytesToMat(data []byte) (gocv.Mat, error) {
-	mat, err := gocv.NewMatFromBytes(defaultFrameHeight, defaultFrameWidth, gocv.MatTypeCV8UC3, data)
-	if err != nil || mat.Empty() {
-		if !mat.Empty() {
 			mat.Close()
 		}
-		return gocv.Mat{}, fmt.Errorf("failed to create Mat")
-	}
-	return mat, nil
-}
-
-func (fp *FrameProcessor) detectFaces(mat gocv.Mat) []models.FaceDetection {
-	if !fp.session.faceDetectionEnabled || fp.session.faceDetector == nil {
-		return nil
-	}
-
-	detections, err := fp.session.faceDetector.DetectFaces(mat)
-	if err != nil {
-		return nil
-	}
-
-	if len(detections) > 0 {
-		fp.manager.IncrementFaceCount(int64(len(detections)))
-	}
-
-	return detections
-}
-
-func (fp *FrameProcessor) renderOverlay(mat gocv.Mat, detections []models.FaceDetection) {
-	if fp.session.overlay == nil || !fp.session.overlay.IsEnabled() {
-		return
-	}
-
-	fps := 0.0
-	if fp.session.perfMonitor != nil {
-		fps = fp.session.perfMonitor.GetProcessingFPS()
-	}
-
-	fp.session.overlay.RenderDetections(
-		&mat,
-		detections,
-		fp.session.Camera.Name,
-		fps,
-		fp.frameCounter,
-	)
-}
-
-func (fp *FrameProcessor) writeToOutput(mat gocv.Mat) error {
-	if fp.session.outputFFmpeg == nil || fp.session.outputFFmpeg.stdinPipe == nil {
-		return fmt.Errorf("output pipe not available")
-	}
-
-	rawBytes := mat.ToBytes()
-	_, err := fp.session.outputFFmpeg.stdinPipe.Write(rawBytes)
-
-	return err
-}
-
-func (fp *FrameProcessor) updateMetrics(detections []models.FaceDetection) {
-	fp.manager.IncrementFrameCount(1)
-
-	if fp.session.perfMonitor != nil {
-		// Tracking would happen here
-	}
-
-	// Periodic health check
-	if fp.frameCounter%100 == 0 && fp.session.perfMonitor != nil {
-		if isHealthy, msg := fp.session.perfMonitor.CheckPerformance(); !isHealthy {
-			utils.GetLogger().Warnf("[Camera %s] Performance issue: %s",
-				fp.session.CameraID, msg)
-		}
 	}
 }
 
-func (fp *FrameProcessor) ShouldStop(err error) bool {
-	if err == io.EOF {
-		utils.GetLogger().Warnf("[Camera %s] Stream ended", fp.session.CameraID)
-		return true
-	}
-
-	if fp.consecutiveErrors >= maxConsecutiveErrors {
-		utils.GetLogger().Errorf("[Camera %s] Too many errors (%d)",
-			fp.session.CameraID, fp.consecutiveErrors)
-		return true
-	}
-
-	return false
-}
-
-func (fp *FrameProcessor) Cleanup() {
-	// Cleanup resources if needed
-}
-
-// ==================== STATUS & STATISTICS ====================
+// ==================== STATUS ====================
 
 func (sm *StreamManager) GetAllStreams() map[string]*StreamSession {
 	sm.sessionsMutex.RLock()
@@ -825,24 +706,16 @@ func (sm *StreamManager) GetStreamStatus(cameraID string) (*models.StreamStatusR
 	uptime := time.Since(session.StartTime).Milliseconds()
 	mediaPath := fmt.Sprintf("camera_%s", cameraID)
 
-	resp := &models.StreamStatusResponse{
-		CameraID:   cameraID,
-		Status:     session.Status,
-		IsActive:   session.Status == models.StreamStatusStreaming,
-		UptimeMs:   uptime,
-		FrameCount: session.FrameCount,
-		ErrorCount: session.ErrorCount,
-		WebRTCUrl:  fmt.Sprintf("http://localhost:%d/%s", mediaMTXWebRTCPort, mediaPath),
-		HLSUrl:     fmt.Sprintf("http://localhost:%d/%s/index.m3u8", mediaMTXHLSPort, mediaPath),
-		RTSPUrl:    fmt.Sprintf("rtsp://localhost:%d/%s", mediaMTXRTSPPort, mediaPath),
-		RTMPUrl:    fmt.Sprintf("rtmp://localhost:%d/%s", mediaMTXRTMPPort, mediaPath),
-	}
-
-	if session.LastError != nil {
-		resp.LastError = session.LastError.Error()
-	}
-
-	return resp, nil
+	return &models.StreamStatusResponse{
+		CameraID:  cameraID,
+		Status:    session.Status,
+		IsActive:  session.Status == models.StreamStatusStreaming,
+		UptimeMs:  uptime,
+		WebRTCUrl: fmt.Sprintf("http://localhost:%d/%s", mediaMTXWebRTCPort, mediaPath),
+		HLSUrl:    fmt.Sprintf("http://localhost:%d/%s/index.m3u8", mediaMTXHLSPort, mediaPath),
+		RTSPUrl:   fmt.Sprintf("rtsp://localhost:%d/%s", mediaMTXRTSPPort, mediaPath),
+		RTMPUrl:   fmt.Sprintf("rtmp://localhost:%d/%s", mediaMTXRTMPPort, mediaPath),
+	}, nil
 }
 
 func (sm *StreamManager) GetHealthStatus() *models.HealthCheckResponse {
@@ -854,9 +727,6 @@ func (sm *StreamManager) GetHealthStatus() *models.HealthCheckResponse {
 	}
 	sm.sessionsMutex.RUnlock()
 
-	uptime := time.Since(sm.startTime).Seconds()
-	totalFrames := sm.GetTotalProcessedFrames()
-
 	return &models.HealthCheckResponse{
 		Status:               "healthy",
 		Timestamp:            time.Now().Format(time.RFC3339),
@@ -864,52 +734,8 @@ func (sm *StreamManager) GetHealthStatus() *models.HealthCheckResponse {
 		Version:              "2.0.0",
 		ActiveStreams:        activeCount,
 		MaxConcurrentStreams: sm.maxConcurrentStreams,
-		TotalProcessedFrames: totalFrames,
-		UptimeSeconds:        int64(uptime),
 		StreamSessions:       streamStatuses,
 	}
-}
-
-func (sm *StreamManager) GetStreamStats(cameraID string) (map[string]interface{}, error) {
-	session, err := sm.getSession(cameraID)
-	if err != nil {
-		return nil, err
-	}
-
-	uptime := int64(time.Since(session.StartTime).Seconds())
-	currentFPS := sm.calculateFPS(session.FrameCount, uptime)
-
-	stats := map[string]interface{}{
-		"cameraId":             cameraID,
-		"status":               string(session.Status),
-		"uptimeSeconds":        uptime,
-		"framesProcessed":      session.FrameCount,
-		"currentFps":           currentFPS,
-		"faceDetectionEnabled": session.faceDetectionEnabled,
-		"errorCount":           session.ErrorCount,
-	}
-
-	// Add performance metrics if available
-	if session.perfMonitor != nil {
-		stats["processingFps"] = session.perfMonitor.GetProcessingFPS()
-		stats["averageProcessingTimeMs"] = float64(session.perfMonitor.GetAverageProcessingTime())
-	}
-
-	// Add face detection metrics if available
-	if session.frameDecoder != nil {
-		metrics := session.frameDecoder.GetMetrics()
-		stats["facesDetected"] = metrics.FacesDetected
-		stats["detectionRate"] = metrics.DetectionRate
-	}
-
-	return stats, nil
-}
-
-func (sm *StreamManager) calculateFPS(frameCount, uptimeSeconds int64) float64 {
-	if uptimeSeconds <= 0 {
-		return 0.0
-	}
-	return float64(frameCount) / float64(uptimeSeconds)
 }
 
 // ==================== CONFIGURATION ====================
@@ -923,12 +749,7 @@ func (sm *StreamManager) ToggleFaceDetection(cameraID string, enabled bool) erro
 	}
 
 	logger.Infof("Toggling face detection for camera %s to %v", cameraID, enabled)
-
 	session.faceDetectionEnabled = enabled
-
-	if session.frameDecoder != nil {
-		session.frameDecoder.SetFaceDetectionEnabled(enabled)
-	}
 
 	return nil
 }
@@ -941,39 +762,12 @@ func (sm *StreamManager) UpdateFrameSkipInterval(cameraID string, interval int) 
 		return err
 	}
 
-	if interval < 1 {
-		return fmt.Errorf("invalid frame skip interval: %d (must be >= 1)", interval)
+	if interval < 1 || interval > 10 {
+		return fmt.Errorf("invalid frame skip interval: %d (must be 1-10)", interval)
 	}
 
 	logger.Infof("Updating frame skip interval for camera %s to %d", cameraID, interval)
-
-	if session.frameDecoder != nil {
-		session.frameDecoder.SetFrameSkipInterval(interval)
-	}
-
-	if session.perfMonitor != nil {
-		return session.perfMonitor.SetFrameSkipInterval(interval)
-	}
+	session.frameSkipInterval = interval
 
 	return nil
-}
-
-// ==================== METRICS ====================
-
-func (sm *StreamManager) GetTotalProcessedFrames() int64 {
-	sm.statsMutex.Lock()
-	defer sm.statsMutex.Unlock()
-	return sm.totalProcessedFrames
-}
-
-func (sm *StreamManager) IncrementFrameCount(amount int64) {
-	sm.statsMutex.Lock()
-	sm.totalProcessedFrames += amount
-	sm.statsMutex.Unlock()
-}
-
-func (sm *StreamManager) IncrementFaceCount(amount int64) {
-	sm.statsMutex.Lock()
-	sm.totalDetectedFaces += amount
-	sm.statsMutex.Unlock()
 }

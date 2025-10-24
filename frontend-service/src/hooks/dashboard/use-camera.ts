@@ -18,6 +18,7 @@ export const useCamera = (): any => {
       description,
       resolution,
       fps,
+      isActive,
     }: createCameraApiRequest) => {
       const response = await createCameraRequest({
         name,
@@ -26,6 +27,7 @@ export const useCamera = (): any => {
         description,
         resolution,
         fps,
+        isActive,
       });
       console.log("create camera response", response);
       if (response.status.response_code === 201) {
@@ -49,7 +51,7 @@ export const useCamera = (): any => {
     mutationFn: async () => {
       const response = await GetAllCamerasRequest();
 
-      if (response.status.response_code === 200) {
+      if (response.status.response_code === 200 && response?.data?.cameras) {
         return response;
       }
     },
@@ -89,13 +91,16 @@ export const useCamera = (): any => {
     mutationFn: async (cameraId: string) => {
       const response = await startCameraStreamRequest(cameraId);
       console.log("start camera stream response", response);
-      if (response.status.response_code === 200) {
+      if (
+        response?.status?.response_code === 200 &&
+        response?.data?.streamUrls?.webrtcUrl
+      ) {
         return response;
       }
     },
     onSuccess: (response: any) => {
       console.log("data", response);
-      Toast.success({ message: "Success", description: response.message });
+      Toast.success({ message: "Success", description: response?.message });
     },
     onError: (error: any) => {
       console.log("start camera stream error", error?.response?.data?.message);
@@ -110,13 +115,12 @@ export const useCamera = (): any => {
     mutationFn: async (cameraId: string) => {
       const response = await stopCameraStreamRequest(cameraId);
       console.log("stop camera stream response", response);
-      if (response.status.response_code === 200) {
+      if (response?.status?.response_code === 200) {
         return response;
       }
     },
     onSuccess: (response: any) => {
-      console.log("data", response);
-      Toast.success({ message: "Success", description: response.message });
+      Toast.success({ message: "Success", description: response?.message });
     },
     onError: (error: any) => {
       console.log("stop camera stream error", error?.response?.data?.message);

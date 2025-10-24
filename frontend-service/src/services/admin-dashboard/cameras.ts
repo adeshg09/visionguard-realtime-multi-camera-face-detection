@@ -42,6 +42,7 @@ export interface createCameraApiRequest {
   description: string;
   resolution: string;
   fps: number;
+  isActive: boolean;
 }
 
 /* Function */

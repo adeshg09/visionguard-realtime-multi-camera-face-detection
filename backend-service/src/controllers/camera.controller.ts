@@ -11,6 +11,7 @@ import { successResponse, errorResponse } from "@/utils/response.js";
 import {
   CameraResponse,
   CreateCameraRequest,
+  StartStreamResponse,
   UpdateCameraRequest,
 } from "@/dtos/camera.dto.js";
 import { createCameraService } from "@/services/camera.service.js";
@@ -30,8 +31,8 @@ export const createCameraController = (prisma: PrismaClient) => {
       return successResponse(
         c,
         STATUS_CODES.CREATED,
+        RESPONSE_MESSAGES.SUCCESS,
         RESPONSE_SUCCESS_MESSAGES.CAMERA_CREATED,
-        "Camera created successfully",
         camera
       );
     } catch (error) {
@@ -57,8 +58,8 @@ export const createCameraController = (prisma: PrismaClient) => {
       return successResponse(
         c,
         STATUS_CODES.OK,
+        RESPONSE_MESSAGES.SUCCESS,
         RESPONSE_SUCCESS_MESSAGES.CAMERAS_RETRIEVED,
-        "Cameras retrieved successfully",
         { cameras: result.data, pagination: result.pagination }
       );
     } catch (error) {
@@ -81,8 +82,8 @@ export const createCameraController = (prisma: PrismaClient) => {
       return successResponse(
         c,
         STATUS_CODES.OK,
+        RESPONSE_MESSAGES.SUCCESS,
         RESPONSE_SUCCESS_MESSAGES.CAMERAS_RETRIEVED,
-        "Camera retrieved successfully",
         camera
       );
     } catch (error) {
@@ -111,8 +112,8 @@ export const createCameraController = (prisma: PrismaClient) => {
       return successResponse(
         c,
         STATUS_CODES.OK,
+        RESPONSE_MESSAGES.SUCCESS,
         RESPONSE_SUCCESS_MESSAGES.CAMERA_UPDATED,
-        "Camera updated successfully",
         camera
       );
     } catch (error) {
@@ -136,8 +137,8 @@ export const createCameraController = (prisma: PrismaClient) => {
       return successResponse(
         c,
         STATUS_CODES.OK,
-        RESPONSE_SUCCESS_MESSAGES.CAMERA_DELETED,
-        "Camera deleted successfully"
+        RESPONSE_MESSAGES.SUCCESS,
+        RESPONSE_SUCCESS_MESSAGES.CAMERA_DELETED
       );
     } catch (error) {
       return errorResponse(
@@ -160,21 +161,29 @@ export const createCameraController = (prisma: PrismaClient) => {
       )) as CameraResponse;
 
       const result: any = await workerService.startStream(camera);
-      console.log("backend res is", result);
 
-      if (result.success === true) {
+      if (result.status.response_code === 200) {
+        const updatedCamera = await cameraService.updateCameraOnlineStatus(
+          cameraId,
+          true
+        );
+
         return successResponse(
           c,
           STATUS_CODES.OK,
-          RESPONSE_SUCCESS_MESSAGES.STREAM_STARTED,
+          RESPONSE_MESSAGES.SUCCESS,
           result.message,
           {
-            cameraId: result.cameraId,
-            rtspUrl: result.rtspUrl,
-            webrtcUrl: result.webrtcUrl,
-            hlsUrl: result.hlsUrl,
-            rtmpUrl: result.rtmpUrl,
-          }
+            camera: {
+              ...updatedCamera,
+            },
+            streamUrls: {
+              webrtcUrl: result.data?.webrtcUrl,
+              hlsUrl: result.data?.hlsUrl,
+              rtspUrl: result.data?.rtspUrl,
+              rtmpUrl: result.data?.rtmpUrl,
+            },
+          } as StartStreamResponse
         );
       }
     } catch (error) {
@@ -198,15 +207,25 @@ export const createCameraController = (prisma: PrismaClient) => {
       }
 
       const result = await workerService.stopStream(cameraId);
-      await cameraService.updateCameraStatus(cameraId, false, false);
 
-      return successResponse(
-        c,
-        STATUS_CODES.OK,
-        RESPONSE_SUCCESS_MESSAGES.STREAM_STOPPED,
-        "Stream stopped successfully",
-        result
-      );
+      if (result.status.response_code === 200) {
+        const updatedCamera = await cameraService.updateCameraOnlineStatus(
+          cameraId,
+          false
+        );
+
+        return successResponse(
+          c,
+          STATUS_CODES.OK,
+          RESPONSE_MESSAGES.SUCCESS,
+          RESPONSE_SUCCESS_MESSAGES.STREAM_STOPPED,
+          {
+            camera: {
+              ...updatedCamera,
+            },
+          }
+        );
+      }
     } catch (error) {
       return errorResponse(
         c,
@@ -221,13 +240,16 @@ export const createCameraController = (prisma: PrismaClient) => {
     try {
       const cameraId = c.req.param("id");
       const result = await workerService.getStreamStatus(cameraId);
-      return successResponse(
-        c,
-        STATUS_CODES.OK,
-        RESPONSE_MESSAGES.SUCCESS,
-        RESPONSE_SUCCESS_MESSAGES.STREAM_STATUS_FETCHED,
-        result
-      );
+
+      if (result.status.response_code === 200) {
+        return successResponse(
+          c,
+          STATUS_CODES.OK,
+          RESPONSE_MESSAGES.SUCCESS,
+          RESPONSE_SUCCESS_MESSAGES.STREAM_STATUS_FETCHED,
+          result
+        );
+      }
     } catch (error) {
       return errorResponse(
         c,

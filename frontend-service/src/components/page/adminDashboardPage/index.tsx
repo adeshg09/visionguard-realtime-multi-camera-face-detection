@@ -77,15 +77,6 @@ const AdminDashboardPage = forwardRef<HTMLDivElement, AdminDashboardPageProps>(
                 <span className="sr-only">Notifications</span>
               </Button>
 
-              {/* <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 sm:h-10 sm:w-10 rounded-md bg-muted/50 hover:bg-muted"
-              >
-                <User className="h-5 w-5" />
-                <span className="sr-only">Profile</span>
-              </Button> */}
-
               <Button
                 variant="ghost"
                 size="icon"

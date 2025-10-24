@@ -48,9 +48,5 @@ RUN mkdir -p /tmp/visionguard/snapshots
 # Expose port
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:5000/health || exit 1
-
 # Run the application
 CMD ["./worker-service"]

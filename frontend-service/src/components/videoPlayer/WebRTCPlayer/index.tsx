@@ -19,44 +19,42 @@ interface WebRTCPlayerProps {
  * @param {WebRTCPlayerProps} props - The component props
  * @returns {JSX.Element}
  */
-const WebRTCPlayer = ({ webrtcUrl }: WebRTCPlayerProps): JSX.Element => {
+const WebRTCPlayer = ({
+  webrtcUrl,
+  cameraName,
+}: WebRTCPlayerProps): JSX.Element => {
   /* Refs */
   const videoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
-  const retryCountRef = useRef(0);
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* States */
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [connectionState, setConnectionState] =
-    useState<string>("initializing");
-
-  /* Constants */
-  const MAX_RETRIES = 5;
-  const RETRY_DELAY = 2000;
 
   /* Functions */
+  /**
+   * Function to initialize and start WebRTC stream.
+   *
+   * @returns {Promise<void>}
+   */
   const startStream = async (): Promise<void> => {
-    const mounted = true;
-
     try {
       setLoading(true);
       setError(null);
-      setConnectionState("connecting");
 
+      // Prepare WHEP URL
       const baseUrl = webrtcUrl.endsWith("/")
         ? webrtcUrl.slice(0, -1)
         : webrtcUrl;
       const whepUrl = `${baseUrl}/whep`;
 
+      // Create RTCPeerConnection
       const pc = new RTCPeerConnection({
         iceServers: [
           {
             urls: [
               "stun:stun.l.google.com:19302",
               "stun:stun1.l.google.com:19302",
-              "stun:stun2.l.google.com:19302",
             ],
           },
         ],
@@ -64,76 +62,52 @@ const WebRTCPlayer = ({ webrtcUrl }: WebRTCPlayerProps): JSX.Element => {
 
       pcRef.current = pc;
 
+      // Handle incoming tracks
       pc.ontrack = (event) => {
         if (videoRef.current && event.streams[0]) {
           videoRef.current.srcObject = event.streams[0];
-          setConnectionState("connected");
           setLoading(false);
-          retryCountRef.current = 0;
         }
       };
 
+      // Handle connection state changes
       pc.oniceconnectionstatechange = () => {
-        const state = pc.iceConnectionState;
-        setConnectionState(state);
-
-        if (state === "connected" || state === "completed") {
-          setLoading(false);
-        } else if (state === "failed") {
-          setError("Connection failed");
-          setConnectionState("failed");
+        if (
+          pc.iceConnectionState === "failed" ||
+          pc.iceConnectionState === "disconnected"
+        ) {
+          setError("Connection lost");
         }
       };
 
+      // Add transceivers
       pc.addTransceiver("video", { direction: "recvonly" });
       pc.addTransceiver("audio", { direction: "recvonly" });
 
+      // Create and set local offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      // Send offer to MediaMTX via WHEP
       const response = await fetch(whepUrl, {
         method: "POST",
         headers: { "Content-Type": "application/sdp" },
         body: offer.sdp,
       });
 
-      if (response.status === 404) {
-        if (retryCountRef.current < MAX_RETRIES) {
-          retryCountRef.current++;
-          setConnectionState(
-            `retrying (${retryCountRef.current}/${MAX_RETRIES})`
-          );
-          retryTimeoutRef.current = setTimeout(
-            () => startStream(),
-            RETRY_DELAY
-          );
-          return;
-        } else {
-          throw new Error(
-            "Stream not available. Please try starting the stream again."
-          );
-        }
-      }
-
       if (!response.ok) {
-        await response.text();
-        throw new Error(`Connection failed: ${response.status}`);
+        throw new Error(`Failed to connect: ${response.status}`);
       }
 
+      // Set remote answer
       const answerSdp = await response.text();
-
-      if (mounted) {
-        await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
-        setConnectionState("waiting for video");
-      }
+      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
     } catch (err) {
-      if (mounted) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to load stream";
-        setError(errorMessage);
-        setLoading(false);
-        setConnectionState("error");
-      }
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load stream";
+      setError(errorMessage);
+      setLoading(false);
+      console.error("WebRTC stream error:", err);
     }
   };
 
@@ -142,11 +116,7 @@ const WebRTCPlayer = ({ webrtcUrl }: WebRTCPlayerProps): JSX.Element => {
     startStream();
 
     return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
-      }
-
+      // Cleanup on unmount
       if (pcRef.current) {
         pcRef.current.close();
         pcRef.current = null;
@@ -155,8 +125,6 @@ const WebRTCPlayer = ({ webrtcUrl }: WebRTCPlayerProps): JSX.Element => {
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
-
-      retryCountRef.current = 0;
     };
   }, [webrtcUrl]);
 
@@ -170,23 +138,27 @@ const WebRTCPlayer = ({ webrtcUrl }: WebRTCPlayerProps): JSX.Element => {
             Connection Failed
           </p>
           <p className="text-xs text-muted-foreground max-w-xs">{error}</p>
+          <p className="text-xs text-muted-foreground/70 mt-2">
+            Camera: {cameraName}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0 bg-black">
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/20 dark:bg-muted/5 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
           <div className="text-center space-y-3">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-            <p className="text-xs text-muted-foreground capitalize font-medium">
-              {connectionState || "Connecting..."}
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-white" />
+            <p className="text-xs text-white/80 font-medium">
+              Connecting to {cameraName}...
             </p>
           </div>
         </div>
       )}
+
       <video
         ref={videoRef}
         autoPlay

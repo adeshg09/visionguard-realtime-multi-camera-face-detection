@@ -39,6 +39,7 @@ func (or *OverlayRenderer) RenderDetections(
 	frame *gocv.Mat,
 	detections []models.FaceDetection,
 	cameraName string,
+	location string,
 	fps float64,
 	frameNum int64,
 ) error {
@@ -99,33 +100,37 @@ func (or *OverlayRenderer) RenderDetections(
 		}
 	}
 
-	// Draw overlay information (FPS, Camera ID, detection count)
+	// Draw overlay information (Location, FPS, Detection count)
 	if config.DrawText {
-		// FPS in top-left corner
-		if config.ShowFPS {
-			fpsText := fmt.Sprintf("FPS: %.1f", fps)
-			gocv.PutText(frame, fpsText, image.Pt(5, 25),
-				gocv.FontHersheyPlain, 1.2, textColor, 2)
+		// Helper function for visible text with shadow
+		drawVisibleText := func(text string, x, y int, scale float64) {
+			// Draw black shadow slightly offset
+			gocv.PutText(frame, text, image.Pt(x+1, y+1),
+				gocv.FontHersheyPlain, scale, color.RGBA{0, 0, 0, 255}, 3)
+
+			// Draw main white text
+			gocv.PutText(frame, text, image.Pt(x, y),
+				gocv.FontHersheyPlain, scale, textColor, 2)
 		}
 
-		// Camera ID in top-right corner
-		if config.ShowCameraID && cameraName != "" {
-			cameraText := fmt.Sprintf("Camera: %s", cameraName)
-			gocv.PutText(frame, cameraText, image.Pt(frame.Cols()-250, 25),
-				gocv.FontHersheyPlain, 1.0, textColor, 2)
+		// 🟢 Location (top-left)
+		if location != "" {
+			locationText := fmt.Sprintf("📍 %s", location)
+			drawVisibleText(locationText, 10, 25, 1.2)
 		}
 
-		// Face detection count in bottom-left
+		// 🟢 Faces Detected (bottom-left)
 		if config.ShowDetectionCount {
 			detectionText := fmt.Sprintf("Faces Detected: %d", len(detections))
-			gocv.PutText(frame, detectionText, image.Pt(5, frame.Rows()-10),
-				gocv.FontHersheyPlain, 1.0, textColor, 2)
+			drawVisibleText(detectionText, 10, frame.Rows()-10, 1.0)
 		}
 
-		// Frame number in bottom-right (for debugging)
-		frameText := fmt.Sprintf("Frame: %d", frameNum)
-		gocv.PutText(frame, frameText, image.Pt(frame.Cols()-150, frame.Rows()-10),
-			gocv.FontHersheyPlain, 0.8, textColor, 1)
+		// 🟢 FPS (bottom-right)
+		if config.ShowFPS {
+			fpsText := fmt.Sprintf("FPS: %.1f", fps)
+			textSize := gocv.GetTextSize(fpsText, gocv.FontHersheyPlain, 1.0, 2)
+			drawVisibleText(fpsText, frame.Cols()-textSize.X-10, frame.Rows()-10, 1.0)
+		}
 	}
 
 	renderTime := time.Since(startTime)

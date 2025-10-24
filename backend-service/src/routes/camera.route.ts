@@ -31,7 +31,7 @@ export const createCameraRoutes = (prisma: PrismaClient) => {
     cameraController.getCameras
   );
   cameraRoutes.get("/get-camera-by-id/:id", cameraController.getCameraById);
-  cameraRoutes.put(
+  cameraRoutes.patch(
     "/update-camera/:id",
     validateBody(updateCameraSchema),
     cameraController.updateCamera
