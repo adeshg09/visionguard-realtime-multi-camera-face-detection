@@ -6,6 +6,8 @@ import {
   MoreVertical,
   History,
 } from "lucide-react";
+
+/* Local Imports */
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,18 +16,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import AlertThumbnail from "./alertThumbnail";
+import AlertThumbnail from "../shared/alert-thumbnail";
 
 // ----------------------------------------------------------------------
 
 /* Interface */
-interface LiveAlertsSectionProps {
+interface CameraLiveAlertsProps {
+  cameraId: string;
   alerts: any[];
   todayAlertsCount: number;
   onSnapshotClick: (snapshotUrl: string) => void;
   onViewHistory: () => void;
   onViewAllLive: () => void;
-  formatTimestamp: (timestamp: string) => string;
 }
 
 // ----------------------------------------------------------------------
@@ -33,23 +35,35 @@ interface LiveAlertsSectionProps {
 /**
  * Component to display live alerts section in camera tile.
  */
-const LiveAlertsSection = ({
+const CameraLiveAlerts = ({
   alerts,
   todayAlertsCount,
   onSnapshotClick,
   onViewHistory,
   onViewAllLive,
-  formatTimestamp,
-}: LiveAlertsSectionProps): JSX.Element => {
+}: CameraLiveAlertsProps): JSX.Element => {
+  /* Refs */
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to top when new alert arrives
+  /* Functions */
+  const formatTimestamp = (timestamp: string): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
+  /* Side Effects */
   useEffect(() => {
     if (scrollContainerRef.current && alerts.length > 0) {
       scrollContainerRef.current.scrollTop = 0;
     }
   }, [alerts.length]);
 
+  /* Output */
   return (
     <div className="px-4 py-3 border-b border-border/50 bg-gradient-to-r from-card/50 to-card/30">
       {/* Header with 3-dot menu */}
@@ -129,4 +143,4 @@ const LiveAlertsSection = ({
   );
 };
 
-export default LiveAlertsSection;
+export default CameraLiveAlerts;

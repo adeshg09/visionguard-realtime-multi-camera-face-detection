@@ -1,5 +1,5 @@
 /* Imports */
-import { useCallback, useEffect, useState, type JSX } from "react";
+import { useCallback, useEffect, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 
 /* Local Imports */
@@ -7,7 +7,9 @@ import { PAGE_ADMIN_DASHBOARD } from "@/routes/paths";
 import AdminDashboardPage from "@/components/page/adminDashboardPage";
 import CameraGrid from "./components/cameraGrid";
 import { useCamera } from "@/hooks/dashboard/use-camera";
+import { useAppSelector, useAppDispatch } from "@/hooks/use-store";
 import ButtonLoader from "@/components/loader/inlineLoader";
+import { cameraSliceActions } from "@/store/cameraSlice";
 
 // ----------------------------------------------------------------------
 
@@ -24,6 +26,7 @@ const ManageCamera = (): JSX.Element => {
 
   /* Hooks */
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const {
     getAllCamerasMutation,
     startCameraStreamMutation,
@@ -31,9 +34,8 @@ const ManageCamera = (): JSX.Element => {
     deleteCameraMutation,
   } = useCamera();
 
-  /* States */
-  const [cameras, setCameras] = useState<any[]>([]);
-  const [loadingCameras, setLoadingCameras] = useState<Set<string>>(new Set());
+  /* Redux State */
+  const cameras = useAppSelector((state) => state.camera.cameras);
 
   /* Functions */
   /**
@@ -43,8 +45,8 @@ const ManageCamera = (): JSX.Element => {
    */
   const handleGetCameras = useCallback(async (): Promise<void> => {
     const response = await getAllCamerasMutation.mutateAsync();
-    setCameras(response.data.cameras);
-  }, [getAllCamerasMutation]);
+    dispatch(cameraSliceActions.setCameras(response.data.cameras));
+  }, [getAllCamerasMutation, dispatch]);
 
   /**
    * Function to navigate to add camera page.
@@ -73,31 +75,15 @@ const ManageCamera = (): JSX.Element => {
    */
   const handleStartStream = async (cameraId: string): Promise<void> => {
     try {
-      // Add this camera to loading state
-      setLoadingCameras((prev) => new Set(prev).add(cameraId));
+      dispatch(cameraSliceActions.addLoadingCamera(cameraId));
 
       const response = await startCameraStreamMutation.mutateAsync(cameraId);
 
-      console.log("handleStartStream response", response);
-
-      setCameras((prev) =>
-        prev.map((cam) =>
-          cam.id === cameraId
-            ? {
-                ...response.data.camera,
-              }
-            : cam
-        )
-      );
+      dispatch(cameraSliceActions.updateCamera(response.data.camera));
     } catch (error) {
       console.error("Failed to start stream:", error);
     } finally {
-      // Remove this camera from loading state
-      setLoadingCameras((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(cameraId);
-        return newSet;
-      });
+      dispatch(cameraSliceActions.removeLoadingCamera(cameraId));
     }
   };
 
@@ -109,23 +95,15 @@ const ManageCamera = (): JSX.Element => {
    */
   const handleStopStream = async (cameraId: string): Promise<void> => {
     try {
-      // Add this camera to loading state
-      setLoadingCameras((prev) => new Set(prev).add(cameraId));
+      dispatch(cameraSliceActions.addLoadingCamera(cameraId));
 
       const response = await stopCameraStreamMutation.mutateAsync(cameraId);
 
-      setCameras((prev) =>
-        prev.map((cam) => (cam?.id === cameraId ? response.data.camera : cam))
-      );
+      dispatch(cameraSliceActions.updateCamera(response.data.camera));
     } catch (error) {
       console.error("Failed to stop stream:", error);
     } finally {
-      // Remove this camera from loading state
-      setLoadingCameras((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(cameraId);
-        return newSet;
-      });
+      dispatch(cameraSliceActions.removeLoadingCamera(cameraId));
     }
   };
 
@@ -138,9 +116,7 @@ const ManageCamera = (): JSX.Element => {
   const handleDeleteCamera = async (cameraId: string): Promise<void> => {
     try {
       await deleteCameraMutation.mutateAsync(cameraId);
-
-      // Remove camera from local state after successful deletion
-      setCameras((prev) => prev.filter((cam) => cam.id !== cameraId));
+      dispatch(cameraSliceActions.removeCamera(cameraId));
     } catch (error) {
       console.error("Failed to delete camera:", error);
     }
@@ -149,11 +125,7 @@ const ManageCamera = (): JSX.Element => {
   /* Side-Effects */
   useEffect(() => {
     handleGetCameras();
-  }, []);
-
-  useEffect(() => {
-    console.log("cameras", cameras);
-  }, [cameras]);
+  }, [handleGetCameras]);
 
   /* Output */
   return (
@@ -174,7 +146,6 @@ const ManageCamera = (): JSX.Element => {
           onDeleteCamera={handleDeleteCamera}
           onStartStream={handleStartStream}
           onStopStream={handleStopStream}
-          loadingCameras={loadingCameras}
         />
       )}
     </AdminDashboardPage>

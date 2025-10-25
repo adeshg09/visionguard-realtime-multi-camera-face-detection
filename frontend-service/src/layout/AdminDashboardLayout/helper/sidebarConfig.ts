@@ -1,6 +1,12 @@
-import { PAGE_ADMIN_DASHBOARD } from "@/routes/paths";
+/* Relative Imports */
 import { BarChart3, Camera } from "lucide-react";
 
+/* Local Imports */
+import { PAGE_ADMIN_DASHBOARD } from "@/routes/paths";
+
+// ----------------------------------------------------------------------
+
+/* Constants */
 export const adminSidebarConfig = [
   {
     sectionGroupLabel: "Dashboard",

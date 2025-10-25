@@ -14,7 +14,6 @@ interface CameraGridProps {
   onDeleteCamera: (cameraId: string) => void;
   onStartStream: (cameraId: string) => void;
   onStopStream: (cameraId: string) => void;
-  loadingCameras: Set<string>;
 }
 
 // ----------------------------------------------------------------------
@@ -32,7 +31,6 @@ const CameraGrid = ({
   onDeleteCamera,
   onStartStream,
   onStopStream,
-  loadingCameras,
 }: CameraGridProps): JSX.Element => {
   /* Output */
   if (cameras.length === 0) {
@@ -65,7 +63,6 @@ const CameraGrid = ({
           onDelete={onDeleteCamera}
           onStartStream={onStartStream}
           onStopStream={onStopStream}
-          isLoading={loadingCameras.has(camera.id)}
         />
       ))}
     </div>

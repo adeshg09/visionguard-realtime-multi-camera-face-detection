@@ -1,5 +1,8 @@
+/* Local Imports */
 import { envConfig } from "@/config/envConfig";
 import type { AlertNotification, CameraStatsNotification } from "@/models";
+
+// ----------------------------------------------------------------------
 
 export type WebSocketMessage =
   | AlertNotification
@@ -10,6 +13,8 @@ export type WebSocketMessage =
 type MessageHandler = (message: WebSocketMessage) => void;
 type ErrorHandler = (error: Event) => void;
 type CloseHandler = () => void;
+
+// ----------------------------------------------------------------------
 
 class WebSocketService {
   private ws: WebSocket | null = null;
@@ -23,6 +28,11 @@ class WebSocketService {
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private subscribedCameras: Set<string> = new Set();
 
+  /**
+   * Initializes the WebSocket service.
+   *
+   * Logs a message to the console indicating that the service has been initialized.
+   */
   constructor() {
     console.log("[WebSocket] Service initialized");
   }

@@ -1,6 +1,8 @@
 /* Imports */
 import { type JSX, useState } from "react";
 import { X, Zap, ChevronLeft, ChevronRight } from "lucide-react";
+
+/* Local Imports */
 import {
   Dialog,
   DialogContent,
@@ -8,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import AlertThumbnail from "./alertThumbnail";
+import AlertThumbnail from "../shared/alert-thumbnail";
 
 // ----------------------------------------------------------------------
 
@@ -25,7 +27,7 @@ interface LiveAlertsDialogProps {
 // ----------------------------------------------------------------------
 
 /**
- * Component to display all live alerts in a dialog.
+ * Component to display all live alerts in a paginated dialog.
  */
 const LiveAlertsDialog = ({
   open,
@@ -35,20 +37,26 @@ const LiveAlertsDialog = ({
   onSnapshotClick,
   formatTimestamp,
 }: LiveAlertsDialogProps): JSX.Element => {
+  /* Constants */
   const itemsPerPage = 15;
+
+  /* States */
   const [currentPage, setCurrentPage] = useState(1);
 
+  /* Derived Values */
   const totalPages = Math.ceil(liveAlerts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentAlerts = liveAlerts.slice(startIndex, endIndex);
 
+  /* Functions */
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
 
+  /* Output */
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col p-0">

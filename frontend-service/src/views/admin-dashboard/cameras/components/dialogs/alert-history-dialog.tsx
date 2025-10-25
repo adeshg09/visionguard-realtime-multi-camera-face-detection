@@ -8,6 +8,8 @@ import {
   ChevronRight,
   History,
 } from "lucide-react";
+
+/* Local Imports */
 import {
   Dialog,
   DialogContent,
@@ -45,23 +47,18 @@ const AlertHistoryDialog = ({
   onSnapshotClick,
   fetchAlerts,
 }: AlertHistoryDialogProps): JSX.Element => {
+  /* States */
   const [alerts, setAlerts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  useEffect(() => {
-    if (open && cameraId) {
-      loadAlerts(currentPage);
-    }
-  }, [open, cameraId, currentPage]);
-
+  /* Functions */
   const loadAlerts = async (page: number) => {
     setIsLoading(true);
     try {
       const response = await fetchAlerts(cameraId, page);
-      console.log("load alerts res", response);
       setAlerts(response.data.alerts || []);
       setTotalPages(response.data.pagination?.totalPages || 1);
       setTotalRecords(response.data.pagination?.totalRecords || 0);
@@ -78,7 +75,6 @@ const AlertHistoryDialog = ({
     }
   };
 
-  // Group alerts by date
   const groupAlertsByDate = (alerts: any[]) => {
     const grouped: { [key: string]: any[] } = {};
 
@@ -110,9 +106,18 @@ const AlertHistoryDialog = ({
     });
   };
 
+  /* Side Effects */
+  useEffect(() => {
+    if (open && cameraId) {
+      loadAlerts(currentPage);
+    }
+  }, [open, cameraId, currentPage]);
+
+  /* Derived Values */
   const groupedAlerts = groupAlertsByDate(alerts);
   const dateKeys = Object.keys(groupedAlerts);
 
+  /* Output */
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col p-0">

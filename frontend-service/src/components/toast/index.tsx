@@ -1,6 +1,8 @@
-/* Imports */
+/* Relative Imports */
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 import { toast } from "sonner";
+
+/* Local Imports */
 import { cn } from "@/lib/utils";
 
 // ----------------------------------------------------------------------

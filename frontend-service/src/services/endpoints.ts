@@ -2,9 +2,13 @@ export const AUTH_ENDPOINTS = {
   LOGIN: "/auth/login",
 };
 
+// ----------------------------------------------------------------------
+
 export const ACCOUNT_ENDPOINTS = {
   GET_USER_PROFILE: "/auth/get-profile",
 };
+
+// ----------------------------------------------------------------------
 
 export const ADMIN_DASHBOARD_ENDPOINTS = {
   CAMERAS: {
@@ -26,3 +30,5 @@ export const ADMIN_DASHBOARD_ENDPOINTS = {
     GET_CAMERA_ALERT_STATS: "/get-camera-alert-stats/:cameraId",
   },
 };
+
+// ----------------------------------------------------------------------
