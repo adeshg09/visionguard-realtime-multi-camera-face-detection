@@ -1,4 +1,7 @@
+/* Relative Imports */
 import { z } from "zod";
+
+// ----------------------------------------------------------------------
 
 export const createAlertSchema = z.object({
   cameraId: z.string().min(1, "Camera ID is required"),
@@ -7,6 +10,8 @@ export const createAlertSchema = z.object({
   snapshotUrl: z.string().url().nullable().optional(),
   metadata: z.record(z.string(), z.any()).optional(),
 });
+
+// ----------------------------------------------------------------------
 
 export const alertsQuerySchema = z.object({
   cameraId: z.string().optional(),

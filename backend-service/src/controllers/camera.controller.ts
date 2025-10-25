@@ -103,7 +103,7 @@ export const createCameraController = (prisma: PrismaClient) => {
   /**
    * Fetch a single camera by ID.
    *
-   * @route GET /api/cameras/:id
+   * @route GET /api/cameras/get-camera-by-id/:id
    */
   const getCameraById = async (c: Context) => {
     try {
@@ -132,7 +132,7 @@ export const createCameraController = (prisma: PrismaClient) => {
   /**
    * Update camera details.
    *
-   * @route PUT /api/cameras/:id
+   * @route PUT /api/cameras/update-camera/:id
    */
   const updateCamera = async (c: Context) => {
     try {
@@ -166,7 +166,7 @@ export const createCameraController = (prisma: PrismaClient) => {
   /**
    * Delete a camera and stop stream if active.
    *
-   * @route DELETE /api/cameras/:id
+   * @route DELETE /api/cameras/delete-camera/:id
    */
   const deleteCamera = async (c: Context) => {
     try {
@@ -207,7 +207,7 @@ export const createCameraController = (prisma: PrismaClient) => {
   /**
    * Start a live camera stream.
    *
-   * @route POST /api/cameras/:id/start
+   * @route POST /api/cameras/start-stream/:id
    */
   const startStream = async (c: Context) => {
     try {
@@ -256,7 +256,7 @@ export const createCameraController = (prisma: PrismaClient) => {
   /**
    * Stop an active camera stream.
    *
-   * @route POST /api/cameras/:id/stop
+   * @route POST /api/cameras/stop-stream/:id
    */
   const stopStream = async (c: Context) => {
     try {
@@ -302,7 +302,7 @@ export const createCameraController = (prisma: PrismaClient) => {
   /**
    * Retrieve the current stream status.
    *
-   * @route GET /api/cameras/:id/status
+   * @route GET /api/cameras/get-stream-status/:id
    */
   const getStreamStatus = async (c: Context) => {
     try {
@@ -331,7 +331,7 @@ export const createCameraController = (prisma: PrismaClient) => {
   /**
    * Toggle face detection for a specific camera.
    *
-   * @route PATCH /api/cameras/:id/face-detection
+   * @route POST /api/cameras/toggle-face-detection/:id
    */
   const toggleFaceDetection = async (c: Context) => {
     try {
@@ -374,7 +374,7 @@ export const createCameraController = (prisma: PrismaClient) => {
   /**
    * Update FPS settings for a camera.
    *
-   * @route POST /api/cameras/:id/update-fps
+   * @route POST /api/cameras/update-fps/:id
    */
   const updateFps = async (c: Context) => {
     try {

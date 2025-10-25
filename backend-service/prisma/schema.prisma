@@ -7,11 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ----------------------------------------------------------------------
+
 enum UserRole {
   admin
   viewer
   operator
 }
+
+// ----------------------------------------------------------------------
 
 model User {
   id String @id @default(cuid())
@@ -34,6 +38,8 @@ model User {
   @@index([email])
   @@map("users")
 }
+
+// ----------------------------------------------------------------------
 
 model Camera {
   id String @id @default(cuid())
@@ -80,6 +86,8 @@ model Camera {
   @@index([createdAt])
   @@map("cameras")
 }
+
+// ----------------------------------------------------------------------
 
 model Alert {
   id String @id @default(cuid())

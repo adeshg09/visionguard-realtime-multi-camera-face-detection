@@ -1,3 +1,7 @@
+/* Relative Imports */
+import { PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import { RESPONSE_ERROR_MESSAGES } from "@/constants/index.js";
 import {
   CreateCameraRequest,
@@ -6,9 +10,24 @@ import {
 } from "@/dtos/camera.dto.js";
 import { logger } from "@/libs/logger.lib.js";
 import { PaginationParams, PaginatedResponse } from "@/types/index.js";
-import { PrismaClient } from "@prisma/client";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Service to handle all camera-related operations.
+ *
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {object} - Camera service with all handlers
+ */
 export const createCameraService = (prisma: PrismaClient) => {
+  /**
+   * Creates a new camera for a user.
+   *
+   * @param {string} userId - User ID
+   * @param {CreateCameraRequest} cameraData - Camera data to create
+   * @returns {Promise<CameraResponse>} - Created camera response
+   * @throws {Error} - If camera creation fails
+   */
   const createCamera = async (
     userId: string,
     cameraData: CreateCameraRequest
@@ -29,6 +48,14 @@ export const createCameraService = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Retrieves a list of cameras for a given user.
+   *
+   * @param {string} userId - User ID
+   * @param {PaginationParams} pagination - Pagination parameters
+   * @returns {Promise<PaginatedResponse<CameraResponse>>} - Retrieved cameras response
+   * @throws {Error} - If the cameras retrieval fails
+   */
   const getCamerasByUserId = async (
     userId: string,
     pagination: PaginationParams
@@ -66,6 +93,14 @@ export const createCameraService = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Retrieves a single camera by its ID.
+   *
+   * @param {string} id - Camera ID
+   * @param {string} userId - User ID
+   * @returns {Promise<CameraResponse | null>} - Retrieved camera response or null if not found
+   * @throws {Error} - If the camera is not found
+   */
   const getCameraById = async (
     id: string,
     userId: string
@@ -86,6 +121,15 @@ export const createCameraService = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Updates a camera with new data.
+   *
+   * @param {string} id - Camera ID
+   * @param {string} userId - User ID
+   * @param {UpdateCameraRequest} updateData - Camera data to update
+   * @returns {Promise<CameraResponse>} - Updated camera response
+   * @throws {Error} - If the camera is not found
+   */
   const updateCamera = async (
     id: string,
     userId: string,
@@ -108,6 +152,14 @@ export const createCameraService = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Deletes a camera.
+   *
+   * @param {string} id - Camera ID
+   * @param {string} userId - User ID
+   * @returns {Promise<void>} - Promise that resolves when the camera is deleted
+   * @throws {Error} - If the camera is not found
+   */
   const deleteCamera = async (id: string, userId: string): Promise<void> => {
     try {
       await prisma.camera.delete({
@@ -121,6 +173,14 @@ export const createCameraService = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Updates a camera's active status.
+   *
+   * @param {string} id - Camera ID
+   * @param {boolean} isActive - Camera active status
+   * @returns {Promise<CameraResponse>} - Updated camera response
+   * @throws {Error} - If the camera is not found
+   */
   const updateCameraActiveStatus = async (id: string, isActive: boolean) => {
     try {
       const updatedCamera = await prisma.camera.update({
@@ -138,6 +198,15 @@ export const createCameraService = (prisma: PrismaClient) => {
       throw error;
     }
   };
+
+  /**
+   * Updates a camera's online status.
+   *
+   * @param {string} id - Camera ID
+   * @param {boolean} isOnline - Camera online status
+   * @returns {Promise<CameraResponse>} - Updated camera response
+   * @throws {Error} - If the camera is not found
+   */
 
   const updateCameraOnlineStatus = async (id: string, isOnline: boolean) => {
     try {
@@ -159,8 +228,6 @@ export const createCameraService = (prisma: PrismaClient) => {
       throw error;
     }
   };
-
-  
 
   return {
     createCamera,

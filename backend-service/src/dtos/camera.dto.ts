@@ -44,13 +44,19 @@ export interface UpdateCameraRequest {
   lastOfflineAt?: Date;
 }
 
+// ----------------------------------------------------------------------
+
 export interface StartStreamResponse {
   camera: CameraResponse;
 }
 
+// ----------------------------------------------------------------------
+
 export interface ToggleFaceDetectionRequest {
   enabled: boolean;
 }
+
+// ----------------------------------------------------------------------
 
 export interface UpdateFpsRequest {
   targetFPS: number;

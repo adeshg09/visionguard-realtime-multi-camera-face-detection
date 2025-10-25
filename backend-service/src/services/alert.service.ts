@@ -1,4 +1,7 @@
+/* Relative Imports */
 import { Prisma, PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import {
   AlertResponse,
   AlertsQueryParams,
@@ -8,7 +11,23 @@ import { logger } from "@/libs/logger.lib.js";
 import { PaginatedResponse } from "@/types/index.js";
 import { RESPONSE_ERROR_MESSAGES } from "@/constants/index.js";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Service to handle all alert-related operations.
+ *
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {object} - Alert service with all handlers
+ */
+
 export const createAlertService = (prisma: PrismaClient) => {
+  /**
+   * Create a new alert.
+   *
+   * @param {CreateAlertRequest} alertData - Alert data to create
+   * @returns {Promise<AlertResponse>} - Created alert response
+   * @throws {Error} - If camera is not found
+   */
   const createAlert = async (
     alertData: CreateAlertRequest
   ): Promise<AlertResponse> => {
@@ -53,6 +72,13 @@ export const createAlertService = (prisma: PrismaClient) => {
     };
   };
 
+  /**
+   * Retrieves a list of alerts for a given user.
+   *
+   * @param {string} userId - User ID
+   * @param {AlertsQueryParams} queryParams - Query parameters
+   * @returns {Promise<PaginatedResponse<AlertResponse>>} - Retrieved alerts response
+   */
   const getAlerts = async (
     userId: string,
     queryParams: AlertsQueryParams
@@ -132,6 +158,13 @@ export const createAlertService = (prisma: PrismaClient) => {
     };
   };
 
+  /**
+   * Retrieves an alert by its ID.
+   * @param {string} alertId - ID of the alert to retrieve
+   * @param {string} userId - ID of the user who owns the alert
+   * @returns {Promise<AlertResponse | null>} - Promise that resolves with the retrieved alert or null if not found
+   * @throws {Error} - If the alert is not found
+   */
   const getAlertById = async (
     alertId: string,
     userId: string
@@ -170,6 +203,15 @@ export const createAlertService = (prisma: PrismaClient) => {
     };
   };
 
+  /**
+   * Retrieves recent alerts for a specific camera.
+   *
+   * @param {string} cameraId - Camera ID
+   * @param {string} userId - User ID
+   * @param {number} [limit=10] - Number of alerts to retrieve
+   * @returns {Promise<AlertResponse[]>} - Retrieved alerts response
+   * @throws {Error} - If the camera is not found
+   */
   const getRecentAlertsByCamera = async (
     cameraId: string,
     userId: string,
@@ -207,6 +249,14 @@ export const createAlertService = (prisma: PrismaClient) => {
     }));
   };
 
+  /**
+   * Retrieves alert statistics for a specific camera.
+   *
+   * @param {string} cameraId - Camera ID
+   * @param {string} userId - User ID
+   * @returns {Promise<{totalAlerts: number, todayAlerts: number, averageConfidence: number}>} - Promise that resolves with the alert statistics
+   * @throws {Error} - If the camera is not found
+   */
   const getCameraAlertStats = async (
     cameraId: string,
     userId: string

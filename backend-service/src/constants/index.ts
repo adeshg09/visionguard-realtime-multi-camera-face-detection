@@ -1,5 +1,9 @@
+/* Imports */
 import type { StatusCode } from "hono/utils/http-status";
 
+// ----------------------------------------------------------------------
+
+/* Status Codes */
 export const STATUS_CODES: Record<string, StatusCode> = {
   OK: 200,
   CREATED: 201,
@@ -11,6 +15,9 @@ export const STATUS_CODES: Record<string, StatusCode> = {
   SERVER_ERROR: 500,
 };
 
+// ----------------------------------------------------------------------
+
+/* Response Messages */
 export const RESPONSE_MESSAGES = {
   SUCCESS: "Success!",
   BAD_REQUEST: "Bad Request!",
@@ -22,12 +29,18 @@ export const RESPONSE_MESSAGES = {
   RESOURCE_EXISTS: "Resource already exists!",
 };
 
+// ----------------------------------------------------------------------
+
+/* Token Expiry Durations */
 export const TOKEN_EXPIRY = {
   ACCESS: "1d",
   REFRESH: "7d",
   REMEMBER_ME: "30d",
 };
 
+// ----------------------------------------------------------------------
+
+/* Response Success Messages */
 export const RESPONSE_SUCCESS_MESSAGES = {
   LOGIN_SUCCESS: "Login successful",
   USER_INFO_FETCHED: "User information fetched successfully",
@@ -48,6 +61,9 @@ export const RESPONSE_SUCCESS_MESSAGES = {
   ALERT_STATS_RETRIEVED: "Camera alert stats retrieved successfully",
 };
 
+// ----------------------------------------------------------------------
+
+/* Response Error Messages */
 export const RESPONSE_ERROR_MESSAGES = {
   INVALID_CREDENTIALS: "Invalid credentials",
   LOGIN_FAILED: "Login failed",

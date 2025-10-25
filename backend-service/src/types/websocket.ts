@@ -6,6 +6,8 @@ export interface WebSocketClient {
   subscribedCameras: Set<string>;
 }
 
+// ----------------------------------------------------------------------
+
 export interface AlertNotification {
   type: "ALERT_CREATED";
   data: {
@@ -20,6 +22,8 @@ export interface AlertNotification {
   };
 }
 
+// ----------------------------------------------------------------------
+
 export interface CameraStatsNotification {
   type: "CAMERA_STATS";
   data: {
@@ -29,5 +33,7 @@ export interface CameraStatsNotification {
     recentAlerts: number;
   };
 }
+
+// ----------------------------------------------------------------------
 
 export type WebSocketMessage = AlertNotification | CameraStatsNotification;

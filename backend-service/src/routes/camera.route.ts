@@ -25,14 +25,14 @@ import { createCameraController } from "@/controllers/camera.controller.js";
  * Route handler that Creates all camera-related routes.
  *
  * @param {PrismaClient} prisma - Prisma client instance
- * @returns {Hono} - Configured camera routes
+ * @returns {object} - Camera routes with all handlers
  */
 export const createCameraRoutes = (prisma: PrismaClient) => {
   /* Routes */
   const cameraRoutes = new Hono();
-  const cameraController = createCameraController(prisma);
 
-  // ----------------------------------------------------------------------
+  /* Controller */
+  const cameraController = createCameraController(prisma);
 
   /* Apply authentication to all routes */
   cameraRoutes.use("*", authMiddleware);
@@ -74,8 +74,6 @@ export const createCameraRoutes = (prisma: PrismaClient) => {
     validateBody(updateFpsSchema),
     cameraController.updateFps
   );
-
-  // ----------------------------------------------------------------------
 
   /* Return camera routes */
   return cameraRoutes;

@@ -1,5 +1,10 @@
+/* Imports */
 import type { Context } from "hono";
+
+/* Relative Imports */
 import { PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import { successResponse, errorResponse } from "@/utils/response.js";
 import {
   RESPONSE_ERROR_MESSAGES,
@@ -12,9 +17,25 @@ import { createAlertService } from "@/services/alert.service.js";
 import { AlertNotification } from "@/types/websocket.js";
 import { websocketService } from "@/libs/websocket.lib.js";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Controller to handle all alert-related operations.
+ *
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {object} - Alert controller with all handlers
+ */
 export const createAlertController = (prisma: PrismaClient) => {
+  /* Services */
   const alertService = createAlertService(prisma);
 
+  // ----------------------------------------------------------------------
+
+  /**
+   * Create a new alert.
+   *
+   * @route POST /api/alerts/create-alert
+   */
   const createAlert = async (c: Context) => {
     try {
       const alertData = c.get("validatedData") as CreateAlertRequest;
@@ -55,6 +76,11 @@ export const createAlertController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Retrieve the list of alerts.
+   *
+   * @route GET /api/alerts/get-alerts
+   */
   const getAlerts = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -82,6 +108,11 @@ export const createAlertController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Retrieve an alert by its ID.
+   *
+   * @route GET /api/alerts/get-alert-by-id/:id
+   */
   const getAlertById = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -106,6 +137,11 @@ export const createAlertController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Retrieve recent alerts for a specific camera.
+   *
+   * @route GET /api/alerts/get-recent-alerts-by-camera/:cameraId
+   */
   const getRecentAlertsByCamera = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -135,6 +171,11 @@ export const createAlertController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Retrieve alert statistics for a specific camera.
+   *
+   * @route GET /api/alerts/get-camera-alert-stats/:cameraId
+   */
   const getCameraAlertStats = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -159,6 +200,9 @@ export const createAlertController = (prisma: PrismaClient) => {
     }
   };
 
+  // ----------------------------------------------------------------------
+
+  /* Return all controller functions */
   return {
     createAlert,
     getAlerts,

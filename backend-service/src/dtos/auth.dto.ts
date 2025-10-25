@@ -1,5 +1,8 @@
+/* Relative Imports */
 import { UserRole } from "@prisma/client";
 import type { JwtPayload } from "jsonwebtoken";
+
+// ----------------------------------------------------------------------
 
 export interface TokenPayload extends JwtPayload {
   userId: string;
@@ -10,6 +13,8 @@ export interface Tokens {
   accessToken: string;
   refreshToken: string;
 }
+
+// ----------------------------------------------------------------------
 
 export interface LoginRequest {
   username: string;
@@ -25,6 +30,8 @@ export interface LoginResponse {
   };
   tokens: Tokens;
 }
+
+// ----------------------------------------------------------------------
 
 export interface GetProfileResponse {
   id: string;

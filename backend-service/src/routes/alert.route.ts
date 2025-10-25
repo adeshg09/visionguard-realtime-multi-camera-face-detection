@@ -1,5 +1,10 @@
+/* Imports */
 import { Hono } from "hono";
+
+/* Relative Imports */
 import { PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import { authMiddleware } from "@/middlewares/auth.middleware.js";
 import {
   validateBody,
@@ -11,10 +16,23 @@ import {
 } from "@/validators/alert.validator.js";
 import { createAlertController } from "@/controllers/alert.controller.js";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Creates routes for alert-related operations.
+ *
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {object} - Alert routes with all handlers
+ */
+
 export const createAlertRoutes = (prisma: PrismaClient) => {
+  /* Routes */
   const alertRoutes = new Hono();
+
+  /* Controller */
   const alertController = createAlertController(prisma);
 
+  /* Alert CRUD */
   // Worker service endpoint (authenticated via API key)
   alertRoutes.post(
     "/create-alert",
@@ -49,5 +67,6 @@ export const createAlertRoutes = (prisma: PrismaClient) => {
     alertController.getCameraAlertStats
   );
 
+  /* Return alert routes */
   return alertRoutes;
 };

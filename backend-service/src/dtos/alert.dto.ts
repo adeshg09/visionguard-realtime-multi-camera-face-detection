@@ -6,6 +6,8 @@ export interface CreateAlertRequest {
   metadata?: Record<string, any>;
 }
 
+// ----------------------------------------------------------------------
+
 export interface AlertResponse {
   id: string;
   cameraId: string;
@@ -20,6 +22,8 @@ export interface AlertResponse {
     location: string | null;
   };
 }
+
+// ----------------------------------------------------------------------
 
 export interface AlertsQueryParams {
   cameraId?: string;

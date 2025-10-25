@@ -1,6 +1,18 @@
+/* Relative Imports */
 import { UserRole, type PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import { hashPassword } from "./password.js";
 import { logger } from "@/libs/logger.lib.js";
+
+// ----------------------------------------------------------------------
+
+/**
+ * Seed the database with initial data.
+ *
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {Promise<void>} - Promise that resolves when seeding is complete
+ */
 
 export const seedDatabase = async (prisma: PrismaClient) => {
   try {

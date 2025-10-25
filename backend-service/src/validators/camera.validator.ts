@@ -1,4 +1,7 @@
+/* Relative Imports */
 import z from "zod";
+
+// ----------------------------------------------------------------------
 
 export const createCameraSchema = z.object({
   name: z.string().min(1, "Camera name is required").max(100),
