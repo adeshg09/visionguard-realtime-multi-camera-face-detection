@@ -1,10 +1,14 @@
 package utils
 
+// ----------------------------------------------------------------------
+
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
+
+// ----------------------------------------------------------------------
 
 // Status codes
 const (
@@ -29,6 +33,8 @@ const (
 	ResponseValidationError = "Validation Error!"
 	ResponseResourceExists  = "Resource already exists!"
 )
+
+// ----------------------------------------------------------------------
 
 // StatusInfo represents the status object in responses
 type StatusInfo struct {
@@ -55,6 +61,8 @@ type ErrorDetail struct {
 	Message string `json:"message"`
 	Stack   string `json:"stack,omitempty"`
 }
+
+// ----------------------------------------------------------------------
 
 // SendSuccessResponse sends a standardized success response
 func SendSuccessResponse(c *gin.Context, statusCode int, responseMessage string, message string, data interface{}) {
@@ -84,8 +92,9 @@ func SendErrorResponse(c *gin.Context, statusCode int, responseMessage string, e
 	})
 }
 
-// Helper functions for common responses
+// ----------------------------------------------------------------------
 
+// Helper functions for common responses
 func SuccessOK(c *gin.Context, message string, data interface{}) {
 	SendSuccessResponse(c, StatusOK, ResponseSuccess, message, data)
 }

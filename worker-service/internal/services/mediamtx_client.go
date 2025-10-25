@@ -1,5 +1,7 @@
 package services
 
+// ----------------------------------------------------------------------
+
 import (
 	"encoding/json"
 	"fmt"
@@ -9,6 +11,8 @@ import (
 
 	"worker-service/internal/utils"
 )
+
+// ----------------------------------------------------------------------
 
 // MediaMTXClient handles communication with MediaMTX API
 type MediaMTXClient struct {
@@ -31,9 +35,23 @@ type TrackInfo struct {
 type MediaMTXPathInfo struct {
 	Name          string          `json:"name,omitempty"`
 	Ready         bool            `json:"ready,omitempty"`
-	Tracks        json.RawMessage `json:"tracks,omitempty"` // Can be string or array
+	Tracks        json.RawMessage `json:"tracks,omitempty"`
 	BytesReceived uint64          `json:"bytesReceived,omitempty"`
 }
+
+// ----------------------------------------------------------------------
+
+// NewMediaMTXClient creates a new MediaMTX client
+func NewMediaMTXClient(baseURL string) *MediaMTXClient {
+	return &MediaMTXClient{
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+}
+
+// ----------------------------------------------------------------------
 
 // GetTracks safely extracts track information from the raw JSON
 func (p *MediaMTXPathInfo) GetTracks() ([]TrackInfo, error) {
@@ -41,13 +59,11 @@ func (p *MediaMTXPathInfo) GetTracks() ([]TrackInfo, error) {
 		return nil, nil
 	}
 
-	// Try to unmarshal as string first (older MediaMTX format)
 	var trackString string
 	if err := json.Unmarshal(p.Tracks, &trackString); err == nil {
 		return []TrackInfo{{Codec: trackString}}, nil
 	}
 
-	// Try to unmarshal as array of objects (newer MediaMTX format)
 	var trackArray []TrackInfo
 	if err := json.Unmarshal(p.Tracks, &trackArray); err == nil {
 		return trackArray, nil
@@ -71,16 +87,6 @@ func (p *MediaMTXPathInfo) HasVideoTrack() bool {
 		}
 	}
 	return false
-}
-
-// NewMediaMTXClient creates a new MediaMTX client
-func NewMediaMTXClient(baseURL string) *MediaMTXClient {
-	return &MediaMTXClient{
-		baseURL: baseURL,
-		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-	}
 }
 
 // CreatePath creates a new path in MediaMTX for a camera stream

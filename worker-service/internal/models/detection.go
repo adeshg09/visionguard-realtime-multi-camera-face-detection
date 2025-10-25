@@ -1,5 +1,7 @@
 package models
 
+// ----------------------------------------------------------------------
+
 // FaceDetection represents a single detected face
 type FaceDetection struct {
 	ID         string  `json:"id"`
@@ -30,11 +32,15 @@ type RGBColor struct {
 	B uint8 `json:"b"`
 }
 
+// ----------------------------------------------------------------------
+
 // Default overlay colors
 var (
 	ColorGreen = RGBColor{R: 0, G: 255, B: 0}
 	ColorWhite = RGBColor{R: 255, G: 255, B: 255}
 )
+
+// ----------------------------------------------------------------------
 
 // DefaultOverlayConfig returns the default overlay configuration
 func DefaultOverlayConfig() *OverlayConfig {

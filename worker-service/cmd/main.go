@@ -1,10 +1,14 @@
 package main
 
+// ----------------------------------------------------------------------
+
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
 	"worker-service/internal/config"
 	"worker-service/internal/handlers"
 	"worker-service/internal/middleware"
@@ -12,58 +16,91 @@ import (
 	"worker-service/internal/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
+
+// ----------------------------------------------------------------------
 
 func main() {
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
+		log.Printf("Fatal: Failed to load configuration: %v", err)
 		os.Exit(1)
 	}
+
+	// ----------------------------------------------------------------------
 
 	// Initialize logger
 	utils.InitLogger(cfg.LogLevel)
 	logger := utils.GetLogger()
 
-	logger.Infof("🚀 VisionGuard Worker Service Starting...")
-	logger.Infof("Port: %d | Gin Mode: %s | Max Streams: %d", cfg.Port, cfg.GinMode, cfg.MaxConcurrentStreams)
+	logger.Info("🚀 VisionGuard Worker Service starting...")
+	logger.Infof("Port: %d | Gin Mode: %s | Max Streams: %d",
+		cfg.Port, cfg.GinMode, cfg.MaxConcurrentStreams)
+
+	// ----------------------------------------------------------------------
 
 	// Set Gin mode
 	gin.SetMode(cfg.GinMode)
+
+	// ----------------------------------------------------------------------
 
 	// Initialize services
 	mediamtxClient := services.NewMediaMTXClient(cfg.MediaMTXAPIURL)
 	alertService := services.NewAlertService(cfg)
 	streamManager := services.NewStreamManager(cfg, mediamtxClient, alertService)
 
+	// ----------------------------------------------------------------------
+
 	// Check MediaMTX connectivity
-	healthy, msg := mediamtxClient.IsHealthy()
-	if !healthy {
-		logger.Warnf("⚠️ MediaMTX not healthy: %s", msg)
+	if healthy, msg := mediamtxClient.IsHealthy(); !healthy {
+		logger.Warnf("MediaMTX not healthy: %s", msg)
 	} else {
-		logger.Infof("✓ MediaMTX healthy: %s", msg)
+		logger.Info("MediaMTX connectivity verified")
 	}
+
+	// ----------------------------------------------------------------------
 
 	// Initialize handlers
 	cameraHandler := handlers.NewCameraHandler(streamManager)
 
-	// Create Gin engine
+	// ----------------------------------------------------------------------
+
+	// Setup HTTP server
+	server := setupServer(cfg, cameraHandler)
+
+	// Setup graceful shutdown
+	setupGracefulShutdown(server, streamManager, logger)
+
+	// Start server
+	addr := fmt.Sprintf(":%d", cfg.Port)
+	logger.Infof("Server listening on %s", addr)
+
+	if err := server.Run(addr); err != nil {
+		logger.Fatalf("Failed to start server: %v", err)
+	}
+}
+
+// ----------------------------------------------------------------------
+
+// setupServer configures the Gin engine with routes and middleware
+func setupServer(cfg *config.Config, cameraHandler *handlers.CameraHandler) *gin.Engine {
 	engine := gin.New()
 
 	// Global middleware
-	engine.Use(gin.Logger())
-	engine.Use(gin.Recovery())
+	engine.Use(gin.Logger(), gin.Recovery())
 
-	// Health check (public endpoint)
+	// Public routes
 	engine.GET("/health", cameraHandler.HealthCheck)
 	engine.GET("/api/v1/health", cameraHandler.HealthCheck)
 
+	// ----------------------------------------------------------------------
+
 	// Protected API routes
 	api := engine.Group("/api/v1")
-	api.Use(middleware.WorkerAuthMiddleware(cfg))
+	api.Use(middleware.AuthMiddleware(cfg))
 	{
-		// Camera stream management
 		api.POST("/cameras/start-stream", cameraHandler.StartStream)
 		api.POST("/cameras/stop-stream", cameraHandler.StopStream)
 		api.GET("/cameras/:id/status", cameraHandler.GetStreamStatus)
@@ -71,31 +108,31 @@ func main() {
 		api.POST("/cameras/:id/update-fps", cameraHandler.UpdateFPS)
 	}
 
-	// Handle graceful shutdown
+	return engine
+}
+
+// ----------------------------------------------------------------------
+
+// setupGracefulShutdown handles OS signals for graceful shutdown
+func setupGracefulShutdown(server *gin.Engine, streamManager *services.StreamManager, logger *logrus.Logger) {
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
 
-		logger.Infof("Shutdown signal received, closing streams...")
+		logger.Info("Shutdown signal received, closing streams...")
 
-		// Stop all streams
+		// Stop all active streams
 		streams := streamManager.GetAllStreams()
 		for cameraID := range streams {
 			if _, err := streamManager.StopStream(cameraID); err != nil {
 				logger.Errorf("Error stopping stream %s: %v", cameraID, err)
+			} else {
+				logger.Infof("Stopped stream: %s", cameraID)
 			}
 		}
 
-		logger.Infof("All streams stopped. Exiting...")
+		logger.Info("All streams stopped. Exiting...")
 		os.Exit(0)
 	}()
-
-	// Start server
-	addr := fmt.Sprintf(":%d", cfg.Port)
-	logger.Infof("✓ Worker service listening on %s", addr)
-
-	if err := engine.Run(addr); err != nil {
-		logger.Fatalf("Failed to start server: %v", err)
-	}
 }

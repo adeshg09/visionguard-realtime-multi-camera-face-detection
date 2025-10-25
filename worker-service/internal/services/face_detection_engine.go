@@ -1,5 +1,7 @@
 package services
 
+// ----------------------------------------------------------------------
+
 import (
 	"fmt"
 	"image"
@@ -12,13 +14,15 @@ import (
 	"gocv.io/x/gocv"
 )
 
-const (
-	// FaceDetectionMinConfidence is the minimum confidence threshold for face detection
-	FaceDetectionMinConfidence float32 = 0.85 // 85% confidence
+// ----------------------------------------------------------------------
 
-	// FaceDetectionInputSize is the input size for the DNN model (300x300 for SSD)
-	FaceDetectionInputSize = 300
+// Constants for face detection
+const (
+	FaceDetectionMinConfidence float32 = 0.85
+	FaceDetectionInputSize             = 300
 )
+
+// ----------------------------------------------------------------------
 
 // FaceDetectionEngine handles face detection using OpenCV DNN
 type FaceDetectionEngine struct {
@@ -51,6 +55,8 @@ func NewFaceDetectionEngine(cameraID string, modelPath string) *FaceDetectionEng
 	}
 }
 
+// ----------------------------------------------------------------------
+
 // Initialize loads the OpenCV DNN face detection model
 func (fde *FaceDetectionEngine) Initialize() error {
 	fde.mutex.Lock()
@@ -64,8 +70,7 @@ func (fde *FaceDetectionEngine) Initialize() error {
 
 	logger.Infof("[FaceDetectionEngine] Loading OpenCV DNN model from: %s", fde.modelPath)
 
-	// Load the DNN model using Caffe framework
-	// This model uses ResNet-10 architecture with SSD
+	// Load DNN model
 	net := gocv.ReadNetFromCaffe(fde.prototxtPath, fde.caffeModelPath)
 	if net.Empty() {
 		logger.Errorf("[FaceDetectionEngine] Failed to load DNN model")
@@ -74,7 +79,6 @@ func (fde *FaceDetectionEngine) Initialize() error {
 	}
 
 	// Set backend to default (CPU)
-	// For GPU support: net.SetPreferableBackend(gocv.NetBackendCUDA)
 	net.SetPreferableBackend(gocv.NetBackendDefault)
 	net.SetPreferableTarget(gocv.NetTargetCPU)
 
@@ -129,9 +133,7 @@ func (fde *FaceDetectionEngine) DetectFaces(frame gocv.Mat) ([]models.FaceDetect
 	defer detectionMat.Close()
 
 	// Process detections
-	// Output format: [1, 1, N, 7] where N is number of detections
-	// Each detection: [batchId, classId, confidence, left, top, right, bottom]
-	detections := fde.processDetections(detectionMat, frameWidth, frameHeight)
+	detections := fde.ProcessDetections(detectionMat, frameWidth, frameHeight)
 
 	processingTime := time.Since(startTime)
 	logger.Debugf("[FaceDetectionEngine] Detected %d faces in %v", len(detections), processingTime)
@@ -147,8 +149,8 @@ func (fde *FaceDetectionEngine) DetectFaces(frame gocv.Mat) ([]models.FaceDetect
 	return detections, nil
 }
 
-// processDetections extracts face detections from DNN output
-func (fde *FaceDetectionEngine) processDetections(detectionMat gocv.Mat, frameWidth, frameHeight int) []models.FaceDetection {
+// ProcessDetections extracts face detections from DNN output
+func (fde *FaceDetectionEngine) ProcessDetections(detectionMat gocv.Mat, frameWidth, frameHeight int) []models.FaceDetection {
 	var detections []models.FaceDetection
 
 	// Get the detection matrix size

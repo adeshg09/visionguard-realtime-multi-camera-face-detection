@@ -1,5 +1,7 @@
 package handlers
 
+// ----------------------------------------------------------------------
+
 import (
 	"fmt"
 	"worker-service/internal/models"
@@ -8,6 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// ----------------------------------------------------------------------
 
 // CameraHandler handles camera-related endpoints
 type CameraHandler struct {
@@ -20,6 +24,8 @@ func NewCameraHandler(sm *services.StreamManager) *CameraHandler {
 		streamManager: sm,
 	}
 }
+
+// ----------------------------------------------------------------------
 
 // HealthCheck returns the health status of the service
 func (h *CameraHandler) HealthCheck(c *gin.Context) {

@@ -1,4 +1,3 @@
-# Single stage build for Go worker service with OpenCV
 FROM gocv/opencv:4.8.1
 
 # Set working directory

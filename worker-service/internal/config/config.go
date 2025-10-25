@@ -1,5 +1,8 @@
 package config
 
+// ----------------------------------------------------------------------
+
+/* Imports */
 import (
 	"fmt"
 	"os"
@@ -8,18 +11,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds all configuration for the worker service
+// ----------------------------------------------------------------------
+
+/* Config holds all configuration for the worker service */
 type Config struct {
-	// Server configuration
+	// Server
 	Port     int
 	GinMode  string
 	LogLevel string
 
-	// Backend service configuration
+	// Backend service
 	BackendServiceURL   string
 	BackendWorkerAPIKey string
 
-	// MediaMTX configuration
+	// MediaMTX
 	MediaMTXHost       string
 	MediaMTXRTSPPort   int
 	MediaMTXHLSPort    int
@@ -27,22 +32,23 @@ type Config struct {
 	MediaMTXRTMPPort   int
 	MediaMTXAPIURL     string
 
-	// Stream processing configuration
+	// Stream processing
 	MaxConcurrentStreams int
 
-	// Face detection configuration
+	// Face detection
 	FaceDetectionModelPath string
 
-	// Cloudinary configuration
+	// Cloudinary
 	CloudinaryCloudName string
 	CloudinaryAPIKey    string
 	CloudinaryAPISecret string
 	CloudinaryFolder    string
 }
 
-// LoadConfig loads configuration from environment variables
+// ----------------------------------------------------------------------
+
+/* LoadConfig loads configuration from environment variables */
 func LoadConfig() (*Config, error) {
-	// Load .env file if it exists
 	_ = godotenv.Load()
 
 	config := &Config{
@@ -65,7 +71,6 @@ func LoadConfig() (*Config, error) {
 		CloudinaryFolder:       getEnvString("CLOUDINARY_FOLDER", "visionguard/snapshots"),
 	}
 
-	// Validate configuration
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
@@ -73,7 +78,9 @@ func LoadConfig() (*Config, error) {
 	return config, nil
 }
 
-// Validate performs basic validation of configuration
+// ----------------------------------------------------------------------
+
+/* Validate performs basic validation of configuration */
 func (c *Config) Validate() error {
 	if c.Port < 1 || c.Port > 65535 {
 		return fmt.Errorf("invalid port: %d", c.Port)
@@ -94,7 +101,9 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// Helper functions
+// ----------------------------------------------------------------------
+
+/* Helper functions for environment variable retrieval */
 func getEnvString(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -106,15 +115,6 @@ func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intVal, err := strconv.Atoi(value); err == nil {
 			return intVal
-		}
-	}
-	return defaultValue
-}
-
-func getEnvFloat(key string, defaultValue float64) float64 {
-	if value := os.Getenv(key); value != "" {
-		if floatVal, err := strconv.ParseFloat(value, 64); err == nil {
-			return floatVal
 		}
 	}
 	return defaultValue

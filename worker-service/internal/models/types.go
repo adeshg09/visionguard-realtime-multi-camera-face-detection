@@ -1,5 +1,7 @@
 package models
 
+// ----------------------------------------------------------------------
+
 // Camera represents a camera managed by the worker
 type Camera struct {
 	ID       string `json:"id"`
@@ -11,6 +13,8 @@ type Camera struct {
 // StreamStatus represents the current status of a stream
 type StreamStatus string
 
+// ----------------------------------------------------------------------
+
 const (
 	StreamStatusConnecting StreamStatus = "CONNECTING"
 	StreamStatusStreaming  StreamStatus = "STREAMING"
@@ -18,6 +22,8 @@ const (
 	StreamStatusStopped    StreamStatus = "STOPPED"
 	StreamStatusError      StreamStatus = "ERROR"
 )
+
+// ----------------------------------------------------------------------
 
 // StartStreamRequest is the request payload for starting a stream
 type StartStreamRequest struct {
@@ -77,6 +83,7 @@ type HealthCheckResponse struct {
 	StreamSessions       map[string]StreamStatus `json:"streamSessions"`
 }
 
+// ToggleFaceDetectionRequest is the request payload for toggling face detection
 type ToggleFaceDetectionRequest struct {
 	Enabled bool `json:"enabled" binding:"required"`
 }

@@ -1,5 +1,7 @@
 package services
 
+// ----------------------------------------------------------------------
+
 import (
 	"fmt"
 	"image"
@@ -12,8 +14,9 @@ import (
 	"gocv.io/x/gocv"
 )
 
-// ==================== OVERLAY RENDERER CONSTANTS ====================
+// ----------------------------------------------------------------------
 
+// Constants for overlay rendering
 const (
 	// Text rendering constants
 	DefaultTextScale    = 2.0
@@ -56,6 +59,8 @@ const (
 	FullAlpha = 255
 )
 
+// ----------------------------------------------------------------------
+
 // OverlayRenderer handles rendering of detection results on frames
 type OverlayRenderer struct {
 	cameraID       string
@@ -77,6 +82,8 @@ func NewOverlayRenderer(cameraID string) *OverlayRenderer {
 		renderErrors:   0,
 	}
 }
+
+// ----------------------------------------------------------------------
 
 // RenderDetections renders face detections on a frame
 func (or *OverlayRenderer) RenderDetections(
@@ -101,7 +108,6 @@ func (or *OverlayRenderer) RenderDetections(
 
 	startTime := time.Now()
 
-	// Get configuration
 	config := or.config
 
 	// Convert colors to color.RGBA (used for drawing operations)
@@ -185,14 +191,14 @@ func (or *OverlayRenderer) RenderDetections(
 
 		// Location (top-left, below camera name)
 		if location != "" {
-			locationText := fmt.Sprintf("📍 %s", location)
+			locationText := fmt.Sprintf("Location: %s", location)
 			drawVisibleText(locationText, TextSideMargin, currentY, DefaultTextScale, textColor)
 			currentY += SectionSpacing
 		}
 
 		// FPS (top-right) - MOVED to top for better visibility
 		if config.ShowFPS {
-			fpsText := fmt.Sprintf("🎯 %.1f FPS", fps)
+			fpsText := fmt.Sprintf("FPS: %.1f", fps)
 			textSize := gocv.GetTextSize(fpsText, gocv.FontHersheyPlain, DefaultTextScale, TextMainThickness)
 			drawVisibleText(fpsText, frame.Cols()-textSize.X-TextSideMargin, TextTopMargin, DefaultTextScale, textColor)
 		}
@@ -204,13 +210,13 @@ func (or *OverlayRenderer) RenderDetections(
 			var countColor color.RGBA
 
 			if faceCount == 0 {
-				detectionText = "👤 No faces detected"
+				detectionText = "0 No faces detected"
 				countColor = textColor
 			} else if faceCount == 1 {
-				detectionText = "👤 1 face detected"
+				detectionText = "1 face detected"
 				countColor = accentColor
 			} else {
-				detectionText = fmt.Sprintf("👥 %d faces detected", faceCount)
+				detectionText = fmt.Sprintf(" %d faces detected", faceCount)
 				countColor = warningColor // Red color for multiple faces
 			}
 
@@ -219,7 +225,7 @@ func (or *OverlayRenderer) RenderDetections(
 
 		// ADDED: Timestamp (bottom-right)
 		timestamp := time.Now().Format("15:04:05")
-		timestampText := fmt.Sprintf("🕒 %s", timestamp)
+		timestampText := fmt.Sprintf("Time: %s", timestamp)
 		timestampSize := gocv.GetTextSize(timestampText, gocv.FontHersheyPlain, DefaultTextScale, TextMainThickness)
 		drawVisibleText(timestampText, frame.Cols()-timestampSize.X-TextSideMargin, frame.Rows()-TextBottomMargin, DefaultTextScale, textColor)
 	}
