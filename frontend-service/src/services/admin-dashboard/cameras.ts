@@ -40,8 +40,6 @@ export interface createCameraApiRequest {
   rtspUrl: string;
   location?: string;
   description?: string;
-  resolution?: string;
-  fps?: number;
   isActive?: boolean;
 }
 
@@ -62,8 +60,6 @@ export interface updateCameraApiRequest {
   rtspUrl?: string;
   location?: string;
   description?: string;
-  resolution?: string;
-  fps?: number;
   isActive?: boolean;
 }
 
@@ -179,18 +175,18 @@ export const toggleFaceDetectionRequest = (
 // ----------------------------------------------------------------------
 
 /* Interface */
-export interface updateFrameSkipIntervalApiRequest {
-  frameSkipInterval: number;
+export interface updateFpsApiRequest {
+  targetFPS: number;
 }
 
 /* Function */
-export const updateFrameSkipIntervalRequest = (
+export const updateFpsRequest = (
   cameraId: string,
-  reqData: updateFrameSkipIntervalApiRequest
+  reqData: updateFpsApiRequest
 ): Promise<ApiResponse> => {
   return axiosConfig
     .post(
-      ADMIN_DASHBOARD_ENDPOINTS.CAMERAS.UPDATE_FRAME_SKIP_INTERVAL.replace(
+      ADMIN_DASHBOARD_ENDPOINTS.CAMERAS.UPDATE_FPS.replace(
         ":cameraId",
         cameraId
       ),

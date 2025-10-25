@@ -2,12 +2,10 @@ package models
 
 // Camera represents a camera managed by the worker
 type Camera struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	RTSPUrl    string `json:"rtspUrl"`
-	Location   string `json:"location,omitempty"`
-	Resolution string `json:"resolution,omitempty"`
-	FPS        int    `json:"fps"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	RTSPUrl  string `json:"rtspUrl"`
+	Location string `json:"location,omitempty"`
 }
 
 // StreamStatus represents the current status of a stream
@@ -23,12 +21,11 @@ const (
 
 // StartStreamRequest is the request payload for starting a stream
 type StartStreamRequest struct {
-	CameraID   string `json:"cameraId" binding:"required"`
-	Name       string `json:"name" binding:"required"`
-	RTSPUrl    string `json:"rtspUrl" binding:"required"`
-	Location   string `json:"location" binding:"required"`
-	Resolution string `json:"resolution"`
-	FPS        int    `json:"fps"`
+	CameraID             string `json:"cameraId" binding:"required"`
+	Name                 string `json:"name" binding:"required"`
+	RTSPUrl              string `json:"rtspUrl" binding:"required"`
+	Location             string `json:"location" binding:"required"`
+	FaceDetectionEnabled bool   `json:"faceDetectionEnabled"`
 }
 
 // StartStreamResponse is the response for starting a stream
@@ -78,4 +75,13 @@ type HealthCheckResponse struct {
 	ActiveStreams        int                     `json:"activeStreams"`
 	MaxConcurrentStreams int                     `json:"maxConcurrentStreams"`
 	StreamSessions       map[string]StreamStatus `json:"streamSessions"`
+}
+
+type ToggleFaceDetectionRequest struct {
+	Enabled bool `json:"enabled" binding:"required"`
+}
+
+// UpdateFPSRequest is the request payload for updating the target FPS of a stream
+type UpdateFPSRequest struct {
+	TargetFPS int `json:"targetFPS" binding:"required,min=1,max=30"`
 }

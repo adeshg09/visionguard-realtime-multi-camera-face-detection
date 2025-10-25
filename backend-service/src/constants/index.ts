@@ -10,6 +10,7 @@ export const STATUS_CODES: Record<string, StatusCode> = {
   CONFLICT: 409,
   SERVER_ERROR: 500,
 };
+
 export const RESPONSE_MESSAGES = {
   SUCCESS: "Success!",
   BAD_REQUEST: "Bad Request!",
@@ -40,7 +41,11 @@ export const RESPONSE_SUCCESS_MESSAGES = {
   STREAM_STATUS_FETCHED: "Stream status fetched successfully",
   FACE_DETECTION_ENABLED: "Face detection enabled successfully!",
   FACE_DETECTION_DISABLED: "Face detection disabled successfully!",
-  FRAME_SKIP_INTERVAL_UPDATED: "Frame skip interval updated successfully!",
+  FPS_UPDATED: "FPS settings updated successfully",
+  ALERT_CREATED: "Alert created successfully",
+  ALERTS_RETRIEVED: "Alerts retrieved successfully",
+  ALERT_RETRIEVED: "Alert retrieved successfully",
+  ALERT_STATS_RETRIEVED: "Camera alert stats retrieved successfully",
 };
 
 export const RESPONSE_ERROR_MESSAGES = {
@@ -58,5 +63,10 @@ export const RESPONSE_ERROR_MESSAGES = {
   STREAM_STOP_FAILED: "Failed to stop stream",
   STREAM_STATUS_FETCH_FAILED: "Failed to fetch stream status",
   FACE_DETECTION_TOGGLE_FAILED: "Failed to toggle face detection!",
-  FRAME_SKIP_UPDATE_FAILED: "Failed to update frame skip interval!",
+  FPS_UPDATE_FAILED: "Failed to update FPS settings",
+  ALERT_CREATE_FAILED: "Failed to create alert",
+  ALERTS_RETRIEVE_FAILED: "Failed to retrieve alerts",
+  ALERT_RETRIEVE_FAILED: "Failed to retrieve alert",
+  ALERT_NOT_FOUND: "Alert not found",
+  ALERT_STATS_RETRIEVE_FAILED: "Failed to retrieve camera alert stats",
 };

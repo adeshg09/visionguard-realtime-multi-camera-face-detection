@@ -108,13 +108,11 @@ func (h *CameraHandler) ToggleFaceDetection(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		Enabled bool `json:"enabled" binding:"required"`
-	}
+	var req models.ToggleFaceDetectionRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Warnf("Invalid face detection toggle request: %v", err)
-		utils.ErrorBadRequest(c, fmt.Errorf("invalid request payload: %v", err))
+		utils.ErrorBadRequest(c, fmt.Errorf("invalid request payload: enabled field is required"))
 		return
 	}
 
@@ -139,8 +137,8 @@ func (h *CameraHandler) ToggleFaceDetection(c *gin.Context) {
 	utils.SuccessOK(c, message, resp)
 }
 
-// UpdateFrameSkipInterval updates the frame skip interval for a camera stream
-func (h *CameraHandler) UpdateFrameSkipInterval(c *gin.Context) {
+// UpdateFPS updates the target FPS for a camera stream
+func (h *CameraHandler) UpdateFPS(c *gin.Context) {
 	logger := utils.GetLogger()
 
 	cameraID := c.Param("id")
@@ -149,28 +147,26 @@ func (h *CameraHandler) UpdateFrameSkipInterval(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		FrameSkipInterval int `json:"frameSkipInterval" binding:"required,min=1,max=10"`
-	}
+	var req models.UpdateFPSRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Warnf("Invalid frame skip request: %v", err)
-		utils.ErrorBadRequest(c, fmt.Errorf("frame skip interval must be between 1 and 10"))
+		logger.Warnf("Invalid FPS update request: %v", err)
+		utils.ErrorBadRequest(c, fmt.Errorf("FPS must be between 1 and 60"))
 		return
 	}
 
-	logger.Infof("Updating frame skip interval for camera %s to %d", cameraID, req.FrameSkipInterval)
+	logger.Infof("Updating FPS for camera %s to %d", cameraID, req.TargetFPS)
 
-	if err := h.streamManager.UpdateFrameSkipInterval(cameraID, req.FrameSkipInterval); err != nil {
-		logger.Errorf("Failed to update frame skip interval for camera %s: %v", cameraID, err)
+	if err := h.streamManager.UpdateFPS(cameraID, req.TargetFPS); err != nil {
+		logger.Errorf("Failed to update FPS for camera %s: %v", cameraID, err)
 		utils.ErrorNotFound(c, err)
 		return
 	}
 
 	resp := map[string]interface{}{
-		"cameraId":          cameraID,
-		"frameSkipInterval": req.FrameSkipInterval,
+		"cameraId":  cameraID,
+		"targetFPS": req.TargetFPS,
 	}
 
-	utils.SuccessOK(c, "Frame skip interval updated successfully", resp)
+	utils.SuccessOK(c, "FPS updated successfully", resp)
 }

@@ -10,6 +10,7 @@ import {
   disconnectDatabase,
 } from "./libs/database.lib.js";
 import { seedDatabase } from "./utils/seed.js";
+import { websocketService } from "./libs/websocket.lib.js";
 
 const main = async () => {
   try {
@@ -21,6 +22,10 @@ const main = async () => {
 
     // Run seed data
     await seedDatabase(prisma);
+
+    // Initialize WebSocket server
+    const wsPort = parseInt(envConfig.BACKEND_SERVICE_WEBSOCKET_PORT!);
+    websocketService.initialize(wsPort);
 
     // Create Hono app server
     const app = createAppServer();
@@ -39,7 +44,8 @@ const main = async () => {
         port: envConfig.BACKEND_SERVICE_PORT!,
       },
       (info) => {
-        console.log(`🚀 Server running on port ${info.port}`);
+        console.log(`🚀 HTTP Server running on port ${info.port}`);
+        console.log(`🔌 WebSocket Server running on port ${wsPort}`);
       }
     );
 
@@ -49,6 +55,9 @@ const main = async () => {
 
       // Close HTTP server
       server.close();
+
+      // Shutdown WebSocket server
+      websocketService.shutdown();
 
       // Disconnect database
       await disconnectDatabase(prisma);

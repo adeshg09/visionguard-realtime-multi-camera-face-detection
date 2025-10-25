@@ -55,8 +55,6 @@ const CreateCamera = (): JSX.Element => {
       txtRtspUrl: "",
       txtLocation: "",
       txtDescription: "",
-      txtResolution: "",
-      txtFps: undefined,
       chkIsActive: true,
     },
   });
@@ -77,8 +75,6 @@ const CreateCamera = (): JSX.Element => {
       txtRtspUrl: cameraData.rtspUrl,
       txtLocation: cameraData.location || "",
       txtDescription: cameraData.description || "",
-      txtResolution: cameraData.resolution || "",
-      txtFps: cameraData.fps || undefined,
       chkIsActive: cameraData.isActive,
     });
   };
@@ -98,8 +94,6 @@ const CreateCamera = (): JSX.Element => {
           rtspUrl: values.txtRtspUrl,
           location: values.txtLocation,
           description: values.txtDescription,
-          resolution: values.txtResolution,
-          fps: values.txtFps,
           isActive: values.chkIsActive,
         },
       });
@@ -109,8 +103,6 @@ const CreateCamera = (): JSX.Element => {
         rtspUrl: values.txtRtspUrl,
         location: values.txtLocation,
         description: values.txtDescription,
-        resolution: values.txtResolution,
-        fps: values.txtFps,
         isActive: values.chkIsActive,
       });
     }
@@ -254,55 +246,6 @@ const CreateCamera = (): JSX.Element => {
                         placeholder="Enter description"
                         {...field}
                         maxLength={50}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Resolution */}
-              <FormField
-                control={form.control}
-                name="txtResolution"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Resolution</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter resolution (e.g., 1920x1080)"
-                        {...field}
-                        maxLength={50}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* FPS */}
-              <FormField
-                control={form.control}
-                name="txtFps"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>FPS</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter FPS"
-                        value={field.value === 0 ? "" : field.value}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "") {
-                            field.onChange(undefined);
-                          } else {
-                            const num = Number(value);
-                            if (!isNaN(num)) field.onChange(num);
-                          }
-                        }}
-                        min="1"
-                        max="60"
                       />
                     </FormControl>
                     <FormMessage />

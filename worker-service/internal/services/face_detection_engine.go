@@ -12,6 +12,14 @@ import (
 	"gocv.io/x/gocv"
 )
 
+const (
+	// FaceDetectionMinConfidence is the minimum confidence threshold for face detection
+	FaceDetectionMinConfidence float32 = 0.85 // 85% confidence
+
+	// FaceDetectionInputSize is the input size for the DNN model (300x300 for SSD)
+	FaceDetectionInputSize = 300
+)
+
 // FaceDetectionEngine handles face detection using OpenCV DNN
 type FaceDetectionEngine struct {
 	net              gocv.Net
@@ -29,17 +37,17 @@ type FaceDetectionEngine struct {
 }
 
 // NewFaceDetectionEngine creates a new OpenCV DNN-based face detection engine
-func NewFaceDetectionEngine(cameraID string, modelPath string, minConfidence float32) *FaceDetectionEngine {
+func NewFaceDetectionEngine(cameraID string, modelPath string) *FaceDetectionEngine {
 	return &FaceDetectionEngine{
 		cameraID:         cameraID,
-		minConfidence:    minConfidence,
+		minConfidence:    FaceDetectionMinConfidence,
 		modelPath:        modelPath,
 		prototxtPath:     filepath.Join(modelPath, "deploy.prototxt"),
 		caffeModelPath:   filepath.Join(modelPath, "res10_300x300_ssd_iter_140000.caffemodel"),
 		initialized:      false,
 		detectionCount:   0,
 		totalProcessTime: 0,
-		inputSize:        image.Pt(300, 300), // Standard SSD input size
+		inputSize:        image.Pt(FaceDetectionInputSize, FaceDetectionInputSize),
 	}
 }
 

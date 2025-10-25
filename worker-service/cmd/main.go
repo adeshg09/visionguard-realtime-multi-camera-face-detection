@@ -34,7 +34,8 @@ func main() {
 
 	// Initialize services
 	mediamtxClient := services.NewMediaMTXClient(cfg.MediaMTXAPIURL)
-	streamManager := services.NewStreamManager(cfg.MaxConcurrentStreams, mediamtxClient)
+	alertService := services.NewAlertService(cfg)
+	streamManager := services.NewStreamManager(cfg, mediamtxClient, alertService)
 
 	// Check MediaMTX connectivity
 	healthy, msg := mediamtxClient.IsHealthy()
@@ -67,8 +68,7 @@ func main() {
 		api.POST("/cameras/stop-stream", cameraHandler.StopStream)
 		api.GET("/cameras/:id/status", cameraHandler.GetStreamStatus)
 		api.POST("/cameras/:id/toggle-face-detection", cameraHandler.ToggleFaceDetection)
-		api.POST("/cameras/:id/frame-skip-interval", cameraHandler.UpdateFrameSkipInterval)
-
+		api.POST("/cameras/:id/update-fps", cameraHandler.UpdateFPS)
 	}
 
 	// Handle graceful shutdown

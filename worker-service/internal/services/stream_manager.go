@@ -2,13 +2,17 @@ package services
 
 import (
 	"bufio"
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"worker-service/internal/config"
 	"worker-service/internal/models"
 	"worker-service/internal/utils"
 
@@ -19,20 +23,11 @@ import (
 // ==================== CONFIGURATION ====================
 
 const (
-	defaultFrameWidth    = 1920
-	defaultFrameHeight   = 1080
-	defaultFPS           = 30
-	defaultBytesPerPixel = 3 // BGR24
-
 	maxReconnectAttempts = 5
 	maxConsecutiveErrors = 10
 	connectionTimeout    = 2 * time.Second
 	stopTimeout          = 5 * time.Second
-
-	mediaMTXRTMPPort   = 1935
-	mediaMTXWebRTCPort = 8889
-	mediaMTXHLSPort    = 8888
-	mediaMTXRTSPPort   = 8554
+	defaultBytesPerPixel = 3 // BGR24
 )
 
 // ==================== STREAM SESSION ====================
@@ -58,7 +53,15 @@ type StreamSession struct {
 
 	// Configuration
 	faceDetectionEnabled bool
-	frameSkipInterval    int // Process every Nth frame
+	detectedWidth        int
+	detectedHeight       int
+	detectedMaxFPS       int
+	targetFPS            int
+
+	// Alert service
+	alertService  *AlertService
+	lastAlertTime time.Time
+	alertCooldown time.Duration // Minimum time between alerts
 }
 
 // ==================== FFMPEG WRAPPER ====================
@@ -104,9 +107,11 @@ func (fp *FFmpegProcess) Close() {
 type StreamManager struct {
 	sessions               map[string]*StreamSession
 	sessionsMutex          sync.RWMutex
+	config                 *config.Config
 	maxConcurrentStreams   int
 	mediamtxClient         *MediaMTXClient
 	faceDetectionModelPath string
+	alertService           *AlertService
 }
 
 // StartStreamResponse is the response for starting a stream
@@ -122,12 +127,14 @@ type StartStreamResponse struct {
 
 // ==================== INITIALIZATION ====================
 
-func NewStreamManager(maxConcurrentStreams int, mediamtxClient *MediaMTXClient) *StreamManager {
+func NewStreamManager(cfg *config.Config, mediamtxClient *MediaMTXClient, alertService *AlertService) *StreamManager {
 	sm := &StreamManager{
 		sessions:               make(map[string]*StreamSession),
-		maxConcurrentStreams:   maxConcurrentStreams,
+		config:                 cfg,
+		maxConcurrentStreams:   cfg.MaxConcurrentStreams,
 		mediamtxClient:         mediamtxClient,
 		faceDetectionModelPath: findFaceDetectionModel(),
+		alertService:           alertService,
 	}
 
 	if sm.faceDetectionModelPath == "" {
@@ -159,6 +166,101 @@ func findFaceDetectionModel() string {
 
 // ==================== START STREAM ====================
 
+func (sm *StreamManager) probeStreamInfo(rtspUrl string) (width, height, fps int, err error) {
+	logger := utils.GetLogger()
+	logger.Infof("Probing stream info for: %s", rtspUrl)
+
+	// Add timeout and better error handling
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Use ffprobe with proper JSON output
+	cmd := exec.CommandContext(ctx, "ffprobe",
+		"-v", "quiet",
+		"-print_format", "json",
+		"-show_streams",
+		"-select_streams", "v:0",
+		"-rtsp_transport", "tcp", // Force TCP transport
+		"-analyzeduration", "10M",
+		"-probesize", "10M",
+		rtspUrl,
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Warnf("Failed to probe stream %s: %v", rtspUrl, err)
+		// Return safe defaults
+		return 640, 480, 15, nil
+	}
+
+	// Parse JSON response
+	var result struct {
+		Streams []struct {
+			Width        int    `json:"width"`
+			Height       int    `json:"height"`
+			RFrameRate   string `json:"r_frame_rate"`
+			AvgFrameRate string `json:"avg_frame_rate"`
+			CodecType    string `json:"codec_type"`
+		} `json:"streams"`
+	}
+
+	if err := json.Unmarshal(output, &result); err != nil {
+		logger.Warnf("Failed to parse ffprobe output: %v", err)
+		return 640, 480, 15, nil
+	}
+
+	// Find video stream
+	for _, stream := range result.Streams {
+		if stream.CodecType == "video" {
+			width = stream.Width
+			height = stream.Height
+
+			// Try avg_frame_rate first (more reliable), fall back to r_frame_rate
+			fpsStr := stream.AvgFrameRate
+			if fpsStr == "0/0" || fpsStr == "" {
+				fpsStr = stream.RFrameRate
+			}
+
+			fps = parseFPS(fpsStr)
+
+			// Sanity check FPS (should be between 1-120 for real cameras)
+			if fps <= 0 || fps > 120 {
+				logger.Warnf("Invalid FPS detected (%d), using default 15", fps)
+				fps = 15
+			}
+
+			break
+		}
+	}
+
+	// Validate dimensions
+	if width == 0 || height == 0 {
+		width, height = 640, 480
+	}
+	if fps == 0 {
+		fps = 15
+	}
+
+	logger.Infof("Stream probed: %dx%d @ %dfps", width, height, fps)
+	return width, height, fps, nil
+}
+
+func parseFPS(fpsStr string) int {
+	parts := strings.Split(strings.TrimSpace(fpsStr), "/")
+	if len(parts) == 2 {
+		num, err1 := strconv.Atoi(parts[0])
+		den, err2 := strconv.Atoi(parts[1])
+		if err1 == nil && err2 == nil && den > 0 {
+			calculatedFPS := num / den
+			// Additional sanity check
+			if calculatedFPS > 0 && calculatedFPS <= 120 {
+				return calculatedFPS
+			}
+		}
+	}
+	return 0
+}
+
 func (sm *StreamManager) StartStream(req *models.StartStreamRequest) (*StartStreamResponse, error) {
 	logger := utils.GetLogger()
 
@@ -167,25 +269,43 @@ func (sm *StreamManager) StartStream(req *models.StartStreamRequest) (*StartStre
 		return nil, err
 	}
 
+	// Probe stream info from RTSP URL
+	width, height, maxFPS, err := sm.probeStreamInfo(req.RTSPUrl)
+	if err != nil {
+		logger.Warnf("Failed to probe stream %s, using defaults: %v", req.RTSPUrl, err)
+		width, height, maxFPS = 640, 480, 15 // Safe defaults
+	}
+
+	faceDetectionEnabled := req.FaceDetectionEnabled && len(sm.faceDetectionModelPath) > 0
+
+	logger.Infof("Face detection for camera %s: %v (model exists: %v)",
+		req.Name, faceDetectionEnabled, len(sm.faceDetectionModelPath) > 0)
+
 	// Create session
 	session := &StreamSession{
 		CameraID: req.CameraID,
 		Camera: &models.Camera{
-			ID:         req.CameraID,
-			Name:       req.Name,
-			RTSPUrl:    req.RTSPUrl,
-			Location:   req.Location,
-			Resolution: req.Resolution,
-			FPS:        req.FPS,
+			ID:       req.CameraID,
+			Name:     req.Name,
+			RTSPUrl:  req.RTSPUrl,
+			Location: req.Location,
 		},
-		Status:               models.StreamStatusConnecting,
-		StartTime:            time.Now(),
-		Stop:                 make(chan bool, 1),
-		Done:                 make(chan bool, 1),
-		faceDetector:         NewFaceDetectionEngine(req.CameraID, sm.faceDetectionModelPath, 0.85),
+		Status:    models.StreamStatusConnecting,
+		StartTime: time.Now(),
+		Stop:      make(chan bool, 1),
+		Done:      make(chan bool, 1),
+
+		detectedWidth:  width,
+		detectedHeight: height,
+		detectedMaxFPS: maxFPS,
+		targetFPS:      maxFPS,
+
+		faceDetector:         NewFaceDetectionEngine(req.CameraID, sm.faceDetectionModelPath),
 		overlay:              NewOverlayRenderer(req.CameraID),
-		faceDetectionEnabled: len(sm.faceDetectionModelPath) > 0,
-		frameSkipInterval:    2, // Process every 2nd frame by default
+		faceDetectionEnabled: faceDetectionEnabled,
+		alertService:         sm.alertService,
+		alertCooldown:        5 * time.Second, // 5 seconds between alerts
+		lastAlertTime:        time.Time{},
 	}
 
 	// Initialize face detection if available
@@ -206,7 +326,8 @@ func (sm *StreamManager) StartStream(req *models.StartStreamRequest) (*StartStre
 		return nil, fmt.Errorf("stream failed to start: %v", err)
 	}
 
-	logger.Infof("Stream started and verified live: camera=%s, faceDetection=%v", req.Name, session.faceDetectionEnabled)
+	logger.Infof("Stream started and verified live: camera=%s, resolution=%dx%d, maxFPS=%d, faceDetection=%v",
+		req.Name, width, height, maxFPS, session.faceDetectionEnabled)
 
 	return sm.buildStreamResponse(req, session), nil
 }
@@ -328,10 +449,10 @@ func (sm *StreamManager) buildStreamResponse(req *models.StartStreamRequest, ses
 		CameraID:     req.CameraID,
 		StreamID:     streamID,
 		MediaMTXPath: mediaPath,
-		WebRTCUrl:    fmt.Sprintf("http://localhost:%d/%s", mediaMTXWebRTCPort, mediaPath),
-		HLSUrl:       fmt.Sprintf("http://localhost:%d/%s/index.m3u8", mediaMTXHLSPort, mediaPath),
-		RTSPUrl:      fmt.Sprintf("rtsp://localhost:%d/%s", mediaMTXRTSPPort, mediaPath),
-		RTMPUrl:      fmt.Sprintf("rtmp://localhost:%d/%s", mediaMTXRTMPPort, mediaPath),
+		WebRTCUrl:    fmt.Sprintf("http://localhost:%d/%s", sm.config.MediaMTXWebRTCPort, mediaPath),
+		HLSUrl:       fmt.Sprintf("http://localhost:%d/%s/index.m3u8", sm.config.MediaMTXHLSPort, mediaPath),
+		RTSPUrl:      fmt.Sprintf("rtsp://localhost:%d/%s", sm.config.MediaMTXRTSPPort, mediaPath),
+		RTMPUrl:      fmt.Sprintf("rtmp://localhost:%d/%s", sm.config.MediaMTXRTMPPort, mediaPath),
 	}
 }
 
@@ -511,9 +632,9 @@ func (sm *StreamManager) startInputFFmpeg(session *StreamSession) error {
 }
 
 func (sm *StreamManager) startOutputFFmpeg(session *StreamSession) error {
-	fps := session.Camera.FPS
+	fps := session.targetFPS
 	if fps == 0 {
-		fps = defaultFPS
+		fps = session.detectedMaxFPS
 	}
 
 	mediaPath := fmt.Sprintf("camera_%s", session.CameraID)
@@ -523,7 +644,7 @@ func (sm *StreamManager) startOutputFFmpeg(session *StreamSession) error {
 		"-f", "rawvideo",
 		"-vcodec", "rawvideo",
 		"-pix_fmt", "bgr24",
-		"-s", fmt.Sprintf("%dx%d", defaultFrameWidth, defaultFrameHeight),
+		"-s", fmt.Sprintf("%dx%d", session.detectedWidth, session.detectedHeight),
 		"-r", fmt.Sprintf("%d", fps),
 		"-i", "pipe:0",
 		"-c:v", "libx264",
@@ -537,7 +658,7 @@ func (sm *StreamManager) startOutputFFmpeg(session *StreamSession) error {
 		"-bufsize", "5000k",
 		"-g", fmt.Sprintf("%d", fps*2),
 		"-f", "flv",
-		fmt.Sprintf("rtmp://mediamtx:%d/%s", mediaMTXRTMPPort, mediaPath),
+		fmt.Sprintf("rtmp://%s:%d/%s", sm.config.MediaMTXHost, sm.config.MediaMTXRTMPPort, mediaPath),
 	)
 
 	stdin, err := cmd.StdinPipe()
@@ -595,16 +716,28 @@ func (sm *StreamManager) monitorFFmpegProcess(ffmpeg *FFmpegProcess, session *St
 	}()
 }
 
-// ==================== FRAME PROCESSING ====================
+// ==================== FRAME PROCESSING (WITH ALERTS) ====================
 
 func (sm *StreamManager) processFrames(session *StreamSession) {
 	logger := utils.GetLogger()
-	logger.Infof("Starting frame processing for camera %s", session.CameraID)
+	logger.Infof("Starting frame processing for camera %s (resolution: %dx%d, target FPS: %d)",
+		session.CameraID, session.detectedWidth, session.detectedHeight, session.targetFPS)
 
-	frameSize := defaultFrameWidth * defaultFrameHeight * defaultBytesPerPixel
+	frameSize := session.detectedWidth * session.detectedHeight * defaultBytesPerPixel
 	frameBuffer := make([]byte, frameSize)
 	consecutiveErrors := 0
-	skipCounter := 0
+	frameCounter := 0
+
+	skipRatio := 1
+	if session.targetFPS > 0 && session.detectedMaxFPS > session.targetFPS {
+		skipRatio = session.detectedMaxFPS / session.targetFPS
+		if skipRatio < 1 {
+			skipRatio = 1
+		}
+	}
+
+	logger.Infof("FPS control: %d/%d fps → skip ratio: %d (process every %d frames)",
+		session.targetFPS, session.detectedMaxFPS, skipRatio, skipRatio)
 
 	for {
 		select {
@@ -640,14 +773,14 @@ func (sm *StreamManager) processFrames(session *StreamSession) {
 
 			consecutiveErrors = 0
 
-			// Frame skipping
-			skipCounter++
-			if skipCounter%session.frameSkipInterval != 0 {
-				continue
+			// Frame skipping based on FPS
+			frameCounter++
+			if frameCounter%skipRatio != 0 {
+				continue // Skip this frame based on FPS setting
 			}
 
 			// Convert to Mat
-			mat, err := gocv.NewMatFromBytes(defaultFrameHeight, defaultFrameWidth, gocv.MatTypeCV8UC3, frameBuffer)
+			mat, err := gocv.NewMatFromBytes(session.detectedHeight, session.detectedWidth, gocv.MatTypeCV8UC3, frameBuffer)
 			if err != nil || mat.Empty() {
 				if !mat.Empty() {
 					mat.Close()
@@ -659,21 +792,55 @@ func (sm *StreamManager) processFrames(session *StreamSession) {
 			var detections []models.FaceDetection
 			if session.faceDetectionEnabled && session.faceDetector != nil {
 				detections, _ = session.faceDetector.DetectFaces(mat)
+
+				// Apply overlay to the frame BEFORE taking snapshot
+				if session.overlay != nil && session.overlay.IsEnabled() {
+					session.overlay.RenderDetections(
+						&mat,
+						detections,
+						session.Camera.Name,
+						session.Camera.Location,
+						0, // FPS not needed
+						0, // Frame number not needed
+					)
+				}
+
+				// Create alert if faces detected and cooldown period passed
+				// NOW the frame has bounding boxes and overlay applied
+				if len(detections) > 0 && session.alertService != nil {
+					now := time.Now()
+					if now.Sub(session.lastAlertTime) >= session.alertCooldown {
+						// Create alert asynchronously to avoid blocking frame processing
+						go func(dets []models.FaceDetection, frameCopy gocv.Mat) {
+							defer frameCopy.Close()
+
+							if err := session.alertService.ProcessDetectionAlert(
+								session.CameraID,
+								session.Camera.Name,
+								dets,
+								&frameCopy, // This now has bounding boxes and overlay!
+							); err != nil {
+								logger.Errorf("Failed to process alert for camera %s: %v", session.CameraID, err)
+							}
+						}(detections, mat.Clone()) // Clone of OVERLAID frame
+
+						session.lastAlertTime = now
+					}
+				}
+			} else {
+				// If face detection is disabled but overlay is enabled, still apply overlay
+				if session.overlay != nil && session.overlay.IsEnabled() {
+					session.overlay.RenderDetections(
+						&mat,
+						[]models.FaceDetection{}, // Empty detections
+						session.Camera.Name,
+						session.Camera.Location,
+						0, 0,
+					)
+				}
 			}
 
-			// Render overlay
-			if session.overlay != nil && session.overlay.IsEnabled() {
-				session.overlay.RenderDetections(
-					&mat,
-					detections,
-					session.Camera.Name,
-					session.Camera.Location,
-					0, // FPS not needed
-					0, // Frame number not needed
-				)
-			}
-
-			// Write to output
+			// Write to output (this frame now has overlay regardless of face detection)
 			if session.outputFFmpeg != nil && session.outputFFmpeg.stdinPipe != nil {
 				rawBytes := mat.ToBytes()
 				session.outputFFmpeg.stdinPipe.Write(rawBytes)
@@ -711,10 +878,10 @@ func (sm *StreamManager) GetStreamStatus(cameraID string) (*models.StreamStatusR
 		Status:    session.Status,
 		IsActive:  session.Status == models.StreamStatusStreaming,
 		UptimeMs:  uptime,
-		WebRTCUrl: fmt.Sprintf("http://localhost:%d/%s", mediaMTXWebRTCPort, mediaPath),
-		HLSUrl:    fmt.Sprintf("http://localhost:%d/%s/index.m3u8", mediaMTXHLSPort, mediaPath),
-		RTSPUrl:   fmt.Sprintf("rtsp://localhost:%d/%s", mediaMTXRTSPPort, mediaPath),
-		RTMPUrl:   fmt.Sprintf("rtmp://localhost:%d/%s", mediaMTXRTMPPort, mediaPath),
+		WebRTCUrl: fmt.Sprintf("http://%s:%d/%s", sm.config.MediaMTXHost, sm.config.MediaMTXWebRTCPort, mediaPath),
+		HLSUrl:    fmt.Sprintf("http://%s:%d/%s/index.m3u8", sm.config.MediaMTXHost, sm.config.MediaMTXHLSPort, mediaPath),
+		RTSPUrl:   fmt.Sprintf("rtsp://%s:%d/%s", sm.config.MediaMTXHost, sm.config.MediaMTXRTSPPort, mediaPath),
+		RTMPUrl:   fmt.Sprintf("rtmp://%s:%d/%s", sm.config.MediaMTXHost, sm.config.MediaMTXRTMPPort, mediaPath),
 	}, nil
 }
 
@@ -754,7 +921,8 @@ func (sm *StreamManager) ToggleFaceDetection(cameraID string, enabled bool) erro
 	return nil
 }
 
-func (sm *StreamManager) UpdateFrameSkipInterval(cameraID string, interval int) error {
+// UpdateFPS updates the FPS for a camera stream
+func (sm *StreamManager) UpdateFPS(cameraID string, targetFPS int) error {
 	logger := utils.GetLogger()
 
 	session, err := sm.getSession(cameraID)
@@ -762,12 +930,17 @@ func (sm *StreamManager) UpdateFrameSkipInterval(cameraID string, interval int) 
 		return err
 	}
 
-	if interval < 1 || interval > 10 {
-		return fmt.Errorf("invalid frame skip interval: %d (must be 1-10)", interval)
+	// Validate target FPS doesn't exceed camera capability
+	if targetFPS > session.detectedMaxFPS {
+		return fmt.Errorf("target FPS (%d) exceeds camera maximum (%d)", targetFPS, session.detectedMaxFPS)
 	}
 
-	logger.Infof("Updating frame skip interval for camera %s to %d", cameraID, interval)
-	session.frameSkipInterval = interval
+	if targetFPS < 1 {
+		return fmt.Errorf("target FPS must be at least 1")
+	}
+
+	logger.Infof("Updating FPS for camera %s: %d -> %d", cameraID, session.targetFPS, targetFPS)
+	session.targetFPS = targetFPS
 
 	return nil
 }

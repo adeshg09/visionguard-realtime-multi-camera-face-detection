@@ -1,18 +1,10 @@
-/* Interface */
-export interface ApiResponse {
-  status: {
-    response_code: number;
-    response_message: string;
-  };
-  message: string;
-  data: any;
+export interface WebSocketClient {
+  id: string;
+  userId: string;
+  ws: any;
+  isAlive: boolean;
+  subscribedCameras: Set<string>;
 }
-
-export type WebSocketMessageType =
-  | "ALERT_CREATED"
-  | "CAMERA_STATS"
-  | "CONNECTED"
-  | "PONG";
 
 export interface AlertNotification {
   type: "ALERT_CREATED";
@@ -37,3 +29,5 @@ export interface CameraStatsNotification {
     recentAlerts: number;
   };
 }
+
+export type WebSocketMessage = AlertNotification | CameraStatsNotification;

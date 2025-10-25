@@ -12,6 +12,50 @@ import (
 	"gocv.io/x/gocv"
 )
 
+// ==================== OVERLAY RENDERER CONSTANTS ====================
+
+const (
+	// Text rendering constants
+	DefaultTextScale    = 2.0
+	LargeTextScale      = 2.5
+	TextShadowThickness = 4
+	TextMainThickness   = 3
+	TextShadowOffset    = 2
+
+	// Position constants -
+	TextTopMargin        = 40
+	TextBottomMargin     = 30
+	TextSideMargin       = 20
+	TextMinY             = 35
+	ConfidenceTextOffset = -8
+
+	// Section spacing
+	SectionSpacing = 35
+
+	// Color constants
+	ShadowColorR = 0
+	ShadowColorG = 0
+	ShadowColorB = 0
+	ShadowColorA = 255
+
+	// High-contrast text colors
+	PrimaryTextColorR = 255 // Bright White
+	PrimaryTextColorG = 255
+	PrimaryTextColorB = 255
+
+	// Accent colors for important info
+	AccentTextColorR = 255 // Bright Yellow
+	AccentTextColorG = 255
+	AccentTextColorB = 0
+
+	WarningTextColorR = 255 // Bright Red for alerts
+	WarningTextColorG = 50
+	WarningTextColorB = 50
+
+	// Alpha channel for colors
+	FullAlpha = 255
+)
+
 // OverlayRenderer handles rendering of detection results on frames
 type OverlayRenderer struct {
 	cameraID       string
@@ -65,14 +109,31 @@ func (or *OverlayRenderer) RenderDetections(
 		R: config.BoxColor.R,
 		G: config.BoxColor.G,
 		B: config.BoxColor.B,
-		A: 255,
+		A: FullAlpha,
 	}
 
+	// Use high-contrast white for all text
 	textColor := color.RGBA{
-		R: config.TextColor.R,
-		G: config.TextColor.G,
-		B: config.TextColor.B,
-		A: 255,
+		R: PrimaryTextColorR, // Bright White
+		G: PrimaryTextColorG,
+		B: PrimaryTextColorB,
+		A: FullAlpha,
+	}
+
+	// Accent color for important information
+	accentColor := color.RGBA{
+		R: AccentTextColorR, // Bright Yellow
+		G: AccentTextColorG,
+		B: AccentTextColorB,
+		A: FullAlpha,
+	}
+
+	// Warning color for face count
+	warningColor := color.RGBA{
+		R: WarningTextColorR, // Bright Red
+		G: WarningTextColorG,
+		B: WarningTextColorB,
+		A: FullAlpha,
 	}
 
 	// Draw bounding boxes for detected faces
@@ -82,17 +143,18 @@ func (or *OverlayRenderer) RenderDetections(
 			pt2 := image.Pt(int(detection.X+detection.Width), int(detection.Y+detection.Height))
 
 			// Draw rectangle (bounding box)
-			gocv.Rectangle(frame, image.Rectangle{Min: pt1, Max: pt2}, boxColor, config.LineWidth)
+			gocv.Rectangle(frame, image.Rectangle{Min: pt1, Max: pt2}, boxColor, 4)
 
 			// Optionally draw confidence score on box
 			if config.ShowConfidence && detection.Confidence > 0 {
 				confidenceText := fmt.Sprintf("%.0f%%", detection.Confidence*100)
-				textY := int(detection.Y) - 5
-				if textY < 15 {
-					textY = 15
+				textY := int(detection.Y) + ConfidenceTextOffset
+				if textY < TextMinY {
+					textY = TextMinY
 				}
+				// Use accent color for confidence text
 				gocv.PutText(frame, confidenceText, image.Pt(int(detection.X), textY),
-					gocv.FontHersheyPlain, 1.0, textColor, 1)
+					gocv.FontHersheyPlain, DefaultTextScale, accentColor, TextMainThickness)
 			}
 
 			logger.Debugf("[OverlayRenderer] Face %d: box at (%d,%d) size %dx%d",
@@ -102,35 +164,64 @@ func (or *OverlayRenderer) RenderDetections(
 
 	// Draw overlay information (Location, FPS, Detection count)
 	if config.DrawText {
-		// Helper function for visible text with shadow
-		drawVisibleText := func(text string, x, y int, scale float64) {
-			// Draw black shadow slightly offset
-			gocv.PutText(frame, text, image.Pt(x+1, y+1),
-				gocv.FontHersheyPlain, scale, color.RGBA{0, 0, 0, 255}, 3)
+		// Helper function to draw text with shadow for better visibility
+		drawVisibleText := func(text string, x, y int, scale float64, textColor color.RGBA) {
 
-			// Draw main white text
+			shadowColor := color.RGBA{
+				R: ShadowColorR,
+				G: ShadowColorG,
+				B: ShadowColorB,
+				A: ShadowColorA,
+			}
+			gocv.PutText(frame, text, image.Pt(x+TextShadowOffset, y+TextShadowOffset),
+				gocv.FontHersheyPlain, scale, shadowColor, TextShadowThickness)
+
+			// Draw main text
 			gocv.PutText(frame, text, image.Pt(x, y),
-				gocv.FontHersheyPlain, scale, textColor, 2)
+				gocv.FontHersheyPlain, scale, textColor, TextMainThickness)
 		}
 
-		// 🟢 Location (top-left)
+		currentY := TextTopMargin
+
+		// Location (top-left, below camera name)
 		if location != "" {
 			locationText := fmt.Sprintf("📍 %s", location)
-			drawVisibleText(locationText, 10, 25, 1.2)
+			drawVisibleText(locationText, TextSideMargin, currentY, DefaultTextScale, textColor)
+			currentY += SectionSpacing
 		}
 
-		// 🟢 Faces Detected (bottom-left)
-		if config.ShowDetectionCount {
-			detectionText := fmt.Sprintf("Faces Detected: %d", len(detections))
-			drawVisibleText(detectionText, 10, frame.Rows()-10, 1.0)
-		}
-
-		// 🟢 FPS (bottom-right)
+		// FPS (top-right) - MOVED to top for better visibility
 		if config.ShowFPS {
-			fpsText := fmt.Sprintf("FPS: %.1f", fps)
-			textSize := gocv.GetTextSize(fpsText, gocv.FontHersheyPlain, 1.0, 2)
-			drawVisibleText(fpsText, frame.Cols()-textSize.X-10, frame.Rows()-10, 1.0)
+			fpsText := fmt.Sprintf("🎯 %.1f FPS", fps)
+			textSize := gocv.GetTextSize(fpsText, gocv.FontHersheyPlain, DefaultTextScale, TextMainThickness)
+			drawVisibleText(fpsText, frame.Cols()-textSize.X-TextSideMargin, TextTopMargin, DefaultTextScale, textColor)
 		}
+
+		// Faces Detected (bottom-left) - WITH COLOR CODING
+		if config.ShowDetectionCount {
+			faceCount := len(detections)
+			var detectionText string
+			var countColor color.RGBA
+
+			if faceCount == 0 {
+				detectionText = "👤 No faces detected"
+				countColor = textColor
+			} else if faceCount == 1 {
+				detectionText = "👤 1 face detected"
+				countColor = accentColor
+			} else {
+				detectionText = fmt.Sprintf("👥 %d faces detected", faceCount)
+				countColor = warningColor // Red color for multiple faces
+			}
+
+			drawVisibleText(detectionText, TextSideMargin, frame.Rows()-TextBottomMargin, LargeTextScale, countColor)
+		}
+
+		// ADDED: Timestamp (bottom-right)
+		timestamp := time.Now().Format("15:04:05")
+		timestampText := fmt.Sprintf("🕒 %s", timestamp)
+		timestampSize := gocv.GetTextSize(timestampText, gocv.FontHersheyPlain, DefaultTextScale, TextMainThickness)
+		drawVisibleText(timestampText, frame.Cols()-timestampSize.X-TextSideMargin, frame.Rows()-TextBottomMargin, DefaultTextScale, textColor)
 	}
 
 	renderTime := time.Since(startTime)

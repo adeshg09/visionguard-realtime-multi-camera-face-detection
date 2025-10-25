@@ -4,12 +4,11 @@ export interface CameraResponse {
   rtspUrl: string;
   location?: string | null;
   description?: string | null;
-  resolution?: string | null;
-  fps: number;
   isActive: boolean;
   isOnline: boolean;
   faceDetectionEnabled: boolean;
-  frameSkipInterval: number;
+  targetFPS: number;
+  maxFPS: number;
   webrtcUrl?: string | null;
   hlsUrl?: string | null;
   rtmpUrl?: string | null;
@@ -25,8 +24,6 @@ export interface CreateCameraRequest {
   rtspUrl: string;
   location?: string;
   description?: string;
-  resolution?: string;
-  fps?: number;
   isActive?: boolean;
 }
 
@@ -35,12 +32,11 @@ export interface UpdateCameraRequest {
   rtspUrl?: string;
   location?: string;
   description?: string;
-  resolution?: string;
-  fps?: number;
   isActive?: boolean;
   isOnline?: boolean;
   faceDetectionEnabled?: boolean;
-  frameSkipInterval?: number;
+  targetFPS?: number;
+  maxFPS?: number;
   webrtcUrl?: string | null;
   hlsUrl?: string | null;
   rtmpUrl?: string | null;
@@ -56,6 +52,6 @@ export interface ToggleFaceDetectionRequest {
   enabled: boolean;
 }
 
-export interface UpdateFrameSkipIntervalRequest {
-  frameSkipInterval: number;
+export interface UpdateFpsRequest {
+  targetFPS: number;
 }

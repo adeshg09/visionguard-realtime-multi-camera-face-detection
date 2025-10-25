@@ -1,5 +1,10 @@
+/* Imports */
 import type { Context } from "hono";
+
+/* Relative Imports */
 import { PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import {
   RESPONSE_SUCCESS_MESSAGES,
   RESPONSE_ERROR_MESSAGES,
@@ -14,15 +19,31 @@ import {
   StartStreamResponse,
   ToggleFaceDetectionRequest,
   UpdateCameraRequest,
-  UpdateFrameSkipIntervalRequest,
+  UpdateFpsRequest,
 } from "@/dtos/camera.dto.js";
 import { createCameraService } from "@/services/camera.service.js";
 import { createWorkerService } from "@/services/worker.service.js";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Controller to handle all camera-related operations.
+ *
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {object} - Camera controller with all handlers
+ */
 export const createCameraController = (prisma: PrismaClient) => {
+  /* Services */
   const cameraService = createCameraService(prisma);
   const workerService = createWorkerService();
 
+  // ----------------------------------------------------------------------
+
+  /**
+   * Create a new camera.
+   *
+   * @route POST /api/cameras/create-camera
+   */
   const createCamera = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -47,6 +68,11 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Fetch all cameras for the logged-in user.
+   *
+   * @route GET /api/cameras/get-cameras
+   */
   const getCameras = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -74,6 +100,11 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Fetch a single camera by ID.
+   *
+   * @route GET /api/cameras/:id
+   */
   const getCameraById = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -98,11 +129,15 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Update camera details.
+   *
+   * @route PUT /api/cameras/:id
+   */
   const updateCamera = async (c: Context) => {
     try {
       const user = c.get("user");
       const cameraId = c.req.param("id");
-
       const updateData = c.get("validatedData") as UpdateCameraRequest;
 
       const camera = await cameraService.updateCamera(
@@ -128,31 +163,28 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Delete a camera and stop stream if active.
+   *
+   * @route DELETE /api/cameras/:id
+   */
   const deleteCamera = async (c: Context) => {
     try {
       const user = c.get("user");
       const cameraId = c.req.param("id");
 
       const camera = await cameraService.getCameraById(cameraId, user.id);
-      if (!camera) {
-        throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
-      }
+      if (!camera) throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
 
-      // Try to stop the stream if it's running, but don't block deletion if it fails
-      try {
-        if (camera.isOnline) {
+      if (camera.isOnline) {
+        try {
           await workerService.stopStream(cameraId);
           console.log(`Stream stopped for camera ${cameraId}`);
+        } catch (err) {
+          console.warn(`Failed to stop stream for camera ${cameraId}:`, err);
         }
-      } catch (workerError) {
-        console.warn(
-          `Failed to stop stream for camera ${cameraId}:`,
-          workerError
-        );
-        // Continue with deletion even if stopping stream fails
       }
 
-      // Delete the camera from database
       await cameraService.deleteCamera(cameraId, user.id);
 
       return successResponse(
@@ -172,6 +204,11 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Start a live camera stream.
+   *
+   * @route POST /api/cameras/:id/start
+   */
   const startStream = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -181,11 +218,11 @@ export const createCameraController = (prisma: PrismaClient) => {
         cameraId,
         user.id
       )) as CameraResponse;
-
       const result: any = await workerService.startStream(camera);
 
+      console.log("start stream backend res", result);
+
       if (result.status.response_code === 200) {
-        // Update camera with stream URLs and online status
         const updatedCamera = await cameraService.updateCamera(
           cameraId,
           user.id,
@@ -203,9 +240,7 @@ export const createCameraController = (prisma: PrismaClient) => {
           STATUS_CODES.OK,
           RESPONSE_MESSAGES.SUCCESS,
           result.message,
-          {
-            camera: updatedCamera,
-          } as StartStreamResponse
+          { camera: updatedCamera } as StartStreamResponse
         );
       }
     } catch (error) {
@@ -218,20 +253,22 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Stop an active camera stream.
+   *
+   * @route POST /api/cameras/:id/stop
+   */
   const stopStream = async (c: Context) => {
     try {
       const user = c.get("user");
       const cameraId = c.req.param("id");
 
       const camera = await cameraService.getCameraById(cameraId, user.id);
-      if (!camera) {
-        throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
-      }
+      if (!camera) throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
 
       const result = await workerService.stopStream(cameraId);
 
       if (result.status.response_code === 200) {
-        // Clear stream URLs and update offline status
         const updatedCamera = await cameraService.updateCamera(
           cameraId,
           user.id,
@@ -249,9 +286,7 @@ export const createCameraController = (prisma: PrismaClient) => {
           STATUS_CODES.OK,
           RESPONSE_MESSAGES.SUCCESS,
           RESPONSE_SUCCESS_MESSAGES.STREAM_STOPPED,
-          {
-            camera: updatedCamera,
-          }
+          { camera: updatedCamera }
         );
       }
     } catch (error) {
@@ -264,6 +299,11 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Retrieve the current stream status.
+   *
+   * @route GET /api/cameras/:id/status
+   */
   const getStreamStatus = async (c: Context) => {
     try {
       const cameraId = c.req.param("id");
@@ -288,6 +328,11 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Toggle face detection for a specific camera.
+   *
+   * @route PATCH /api/cameras/:id/face-detection
+   */
   const toggleFaceDetection = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -295,15 +340,11 @@ export const createCameraController = (prisma: PrismaClient) => {
       const { enabled } = c.get("validatedData") as ToggleFaceDetectionRequest;
 
       const camera = await cameraService.getCameraById(cameraId, user.id);
-      if (!camera) {
-        throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
-      }
+      if (!camera) throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
 
-      // Update worker service
       const result = await workerService.toggleFaceDetection(cameraId, enabled);
 
       if (result.status.response_code === 200) {
-        // Persist state to database
         const updatedCamera = await cameraService.updateCamera(
           cameraId,
           user.id,
@@ -330,58 +371,56 @@ export const createCameraController = (prisma: PrismaClient) => {
     }
   };
 
-  const updateFrameSkipInterval = async (c: Context) => {
+  /**
+   * Update FPS settings for a camera.
+   *
+   * @route POST /api/cameras/:id/update-fps
+   */
+  const updateFps = async (c: Context) => {
     try {
       const user = c.get("user");
       const cameraId = c.req.param("id");
-      const { frameSkipInterval } = c.get(
-        "validatedData"
-      ) as UpdateFrameSkipIntervalRequest;
+      const { targetFPS } = c.get("validatedData") as UpdateFpsRequest;
 
-      // Validate range
-      if (frameSkipInterval < 1 || frameSkipInterval > 10) {
-        throw new Error("Frame skip interval must be between 1 and 10");
-      }
-
+      // Get camera to check current maxFPS
       const camera = await cameraService.getCameraById(cameraId, user.id);
-      if (!camera) {
-        throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
+      if (!camera) throw new Error(RESPONSE_ERROR_MESSAGES.CAMERA_NOT_FOUND);
+
+      // Validate targetFPS doesn't exceed camera capability
+      if (targetFPS > (camera.maxFPS || 30)) {
+        throw new Error(`FPS cannot exceed camera maximum of ${camera.maxFPS}`);
       }
 
-      // Update worker service
-      const result = await workerService.updateFrameSkipInterval(
+      // Update in database
+      const updatedCamera = await cameraService.updateCamera(
         cameraId,
-        frameSkipInterval
+        user.id,
+        { targetFPS }
       );
 
-      if (result.status.response_code === 200) {
-        // Persist state to database
-        const updatedCamera = await cameraService.updateCamera(
-          cameraId,
-          user.id,
-          {
-            frameSkipInterval,
-          }
-        );
+      // Forward to worker service for real-time update
+      const result = await workerService.updateFps(cameraId, targetFPS);
 
-        return successResponse(
-          c,
-          STATUS_CODES.OK,
-          RESPONSE_MESSAGES.SUCCESS,
-          result.message,
-          updatedCamera
-        );
-      }
+      return successResponse(
+        c,
+        STATUS_CODES.OK,
+        RESPONSE_MESSAGES.SUCCESS,
+        result.message,
+        updatedCamera
+      );
     } catch (error) {
       return errorResponse(
         c,
         STATUS_CODES.BAD_REQUEST,
-        RESPONSE_ERROR_MESSAGES.FRAME_SKIP_UPDATE_FAILED,
+        RESPONSE_ERROR_MESSAGES.FPS_UPDATE_FAILED,
         error
       );
     }
   };
 
+  // ----------------------------------------------------------------------
+
+  /* Return all controller functions */
   return {
     createCamera,
     getCameras,
@@ -392,6 +431,6 @@ export const createCameraController = (prisma: PrismaClient) => {
     stopStream,
     getStreamStatus,
     toggleFaceDetection,
-    updateFrameSkipInterval,
+    updateFps,
   };
 };

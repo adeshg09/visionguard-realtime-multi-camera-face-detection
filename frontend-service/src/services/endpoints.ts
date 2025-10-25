@@ -17,6 +17,12 @@ export const ADMIN_DASHBOARD_ENDPOINTS = {
     STOP_CAMERA_STREAM: "/cameras/stop-stream/:cameraId",
     GET_STREAM_STATUS: "/cameras/get-stream-status/:cameraId",
     TOGGLE_FACE_DETECTION: "/cameras/toggle-face-detection/:cameraId",
-    UPDATE_FRAME_SKIP_INTERVAL: "/cameras/update-frame-skip-interval/:cameraId",
+    UPDATE_FPS: "/cameras/update-fps/:cameraId",
+  },
+  ALERTS: {
+    GET_ALERTS: "/alerts/get-alerts",
+    GET_ALERT_BY_ID: "/alerts/get-alert-by-id/:id",
+    GET_RECENT_ALERTS_BY_CAMERA: "/get-recent-alerts-by-camera/:cameraId",
+    GET_CAMERA_ALERT_STATS: "/get-camera-alert-stats/:cameraId",
   },
 };

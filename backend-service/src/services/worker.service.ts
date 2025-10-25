@@ -39,8 +39,7 @@ export const createWorkerService = () => {
         name: camera.name,
         rtspUrl: camera.rtspUrl,
         location: camera.location,
-        resolution: camera.resolution,
-        fps: camera.fps,
+        faceDetectionEnabled: camera.faceDetectionEnabled,
       },
     });
 
@@ -80,16 +79,13 @@ export const createWorkerService = () => {
     return response;
   };
 
-  const updateFrameSkipInterval = async (
-    cameraId: string,
-    frameSkipInterval: number
-  ) => {
+  const updateFps = async (cameraId: string, targetFPS: number) => {
     const response = await makeWorkerRequest(
-      `/cameras/${cameraId}/frame-skip-interval`,
+      `/cameras/${cameraId}/update-fps`,
       {
         method: "POST",
         data: {
-          frameSkipInterval,
+          targetFPS,
         },
       }
     );
@@ -102,6 +98,6 @@ export const createWorkerService = () => {
     stopStream,
     getStreamStatus,
     toggleFaceDetection,
-    updateFrameSkipInterval,
+    updateFps,
   };
 };

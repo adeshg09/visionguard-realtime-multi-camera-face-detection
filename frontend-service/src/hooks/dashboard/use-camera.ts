@@ -8,11 +8,11 @@ import {
   stopCameraStreamRequest,
   toggleFaceDetectionRequest,
   updateCameraRequest,
-  updateFrameSkipIntervalRequest,
+  updateFpsRequest,
   type createCameraApiRequest,
   type toggleFaceDetectionApiRequest,
   type updateCameraApiRequest,
-  type updateFrameSkipIntervalApiRequest,
+  type updateFpsApiRequest,
 } from "@/services/admin-dashboard/cameras";
 import { useMutation } from "@tanstack/react-query";
 
@@ -23,8 +23,6 @@ export const useCamera = (): any => {
       rtspUrl,
       location,
       description,
-      resolution,
-      fps,
       isActive,
     }: createCameraApiRequest) => {
       const response = await createCameraRequest({
@@ -32,8 +30,6 @@ export const useCamera = (): any => {
         rtspUrl,
         location,
         description,
-        resolution,
-        fps,
         isActive,
       });
       console.log("create camera response", response);
@@ -159,6 +155,7 @@ export const useCamera = (): any => {
       Toast.success({ message: "Success", description: response?.message });
     },
     onError: (error: any) => {
+      console.log("start camera stream", error);
       console.log("start camera stream error", error?.response?.data?.message);
       Toast.error({
         message: "Error",
@@ -220,16 +217,16 @@ export const useCamera = (): any => {
     },
   });
 
-  const updateFrameSkipIntervalMutation = useMutation({
+  const updateFpsMutation = useMutation({
     mutationFn: async ({
       cameraId,
       reqData,
     }: {
       cameraId: string;
-      reqData: updateFrameSkipIntervalApiRequest;
+      reqData: updateFpsApiRequest;
     }) => {
-      const response = await updateFrameSkipIntervalRequest(cameraId, reqData);
-      console.log("update frame skip interval response", response);
+      const response = await updateFpsRequest(cameraId, reqData);
+      console.log("update FPS response", response);
       if (response.status.response_code === 200) {
         return response;
       }
@@ -238,20 +235,14 @@ export const useCamera = (): any => {
       console.log("data", response);
       Toast.success({
         message: "Success",
-        description:
-          response?.message || "Frame skip interval updated successfully",
+        description: response?.message,
       });
     },
     onError: (error: any) => {
-      console.log(
-        "update frame skip interval error",
-        error?.response?.data?.message
-      );
+      console.log("update FPS error", error?.response?.data?.message);
       Toast.error({
         message: "Error",
-        description:
-          error?.response?.data?.message ||
-          "Failed to update frame skip interval",
+        description: error?.response?.data?.message,
       });
     },
   });
@@ -265,6 +256,6 @@ export const useCamera = (): any => {
     startCameraStreamMutation,
     stopCameraStreamMutation,
     toggleFaceDetectionMutation,
-    updateFrameSkipIntervalMutation,
+    updateFpsMutation,
   };
 };

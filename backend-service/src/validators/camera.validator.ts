@@ -7,8 +7,6 @@ export const createCameraSchema = z.object({
     .startsWith("rtsp://", "Must be an RTSP URL"),
   location: z.string().max(200).optional(),
   description: z.string().max(500).optional(),
-  resolution: z.string().optional(),
-  fps: z.number().min(1).max(60).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -17,8 +15,6 @@ export const updateCameraSchema = z.object({
   rtspUrl: z.url().startsWith("rtsp://").optional(),
   location: z.string().max(200).optional(),
   description: z.string().max(500).optional(),
-  resolution: z.string().optional(),
-  fps: z.number().min(1).max(60).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -33,6 +29,6 @@ export const toggleFaceDetectionSchema = z.object({
   enabled: z.boolean(),
 });
 
-export const updateFrameSkipIntervalSchema = z.object({
-  frameSkipInterval: z.number().min(1).max(10),
+export const updateFpsSchema = z.object({
+  targetFPS: z.number().min(1).max(60),
 });

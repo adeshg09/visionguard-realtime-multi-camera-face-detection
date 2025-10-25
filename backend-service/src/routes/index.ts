@@ -4,6 +4,7 @@ import { RESPONSE_MESSAGES, STATUS_CODES } from "@/constants/index.js";
 import { successResponse } from "@/utils/response.js";
 import { createAuthRoutes } from "./auth.route.js";
 import { createCameraRoutes } from "./camera.route.js";
+import { createAlertRoutes } from "./alert.route.js";
 
 export const createRoutes = (prisma: PrismaClient) => {
   const api = new Hono();
@@ -28,6 +29,7 @@ export const createRoutes = (prisma: PrismaClient) => {
   // API routes
   api.route("/auth", createAuthRoutes(prisma));
   api.route("/cameras", createCameraRoutes(prisma));
+  api.route("/alerts", createAlertRoutes(prisma));
 
   return api;
 };
