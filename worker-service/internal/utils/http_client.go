@@ -1,5 +1,7 @@
 package utils
 
+// ----------------------------------------------------------------------
+
 import (
 	"bytes"
 	"encoding/json"
@@ -8,6 +10,8 @@ import (
 	"net/http"
 	"time"
 )
+
+// ----------------------------------------------------------------------
 
 type HTTPClient struct {
 	baseURL string
@@ -25,7 +29,9 @@ func NewHTTPClient(baseURL, apiKey string) *HTTPClient {
 	}
 }
 
-// Post sends POST request to backend (matching backend's API format)
+// ----------------------------------------------------------------------
+
+// Post sends POST request to backend
 func (h *HTTPClient) Post(endpoint string, body interface{}) (map[string]interface{}, error) {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {

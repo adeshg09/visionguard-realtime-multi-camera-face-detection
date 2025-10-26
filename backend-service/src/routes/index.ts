@@ -1,9 +1,23 @@
+/* Imports */
 import { Hono } from "hono";
+
+/* Relative Imports */
 import { PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import { RESPONSE_MESSAGES, STATUS_CODES } from "@/constants/index.js";
 import { successResponse } from "@/utils/response.js";
 import { createAuthRoutes } from "./auth.route.js";
 import { createCameraRoutes } from "./camera.route.js";
+import { createAlertRoutes } from "./alert.route.js";
+
+// ----------------------------------------------------------------------
+
+/**
+ * Route handler that creates all API routes.
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {object} - Configured API routes
+ */
 
 export const createRoutes = (prisma: PrismaClient) => {
   const api = new Hono();
@@ -28,6 +42,7 @@ export const createRoutes = (prisma: PrismaClient) => {
   // API routes
   api.route("/auth", createAuthRoutes(prisma));
   api.route("/cameras", createCameraRoutes(prisma));
+  api.route("/alerts", createAlertRoutes(prisma));
 
   return api;
 };

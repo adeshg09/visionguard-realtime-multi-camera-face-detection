@@ -3,7 +3,7 @@ import { useContext } from "react";
 
 /* Local Imports */
 import SessionContext from "@/context/sessionContext";
-import { adminSidebarConfig } from "@/layout/AdminDashboardLayout/helper/sidebarConfig";
+import { adminSidebarConfig } from "@/layout/adminDashboardLayout/helper/sidebarConfig";
 
 // ----------------------------------------------------------------------
 

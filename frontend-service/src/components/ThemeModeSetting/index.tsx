@@ -23,9 +23,16 @@ import type { Theme } from "@/context/themeContext";
 
 // ----------------------------------------------------------------------
 
+/**
+ * Theme mode setting component
+ * @component
+ * @returns {JSX.Element}
+ */
 const ThemeModeSetting = (): JSX.Element => {
+  /* Hooks */
   const { themeMode, setTheme } = useThemeSettings();
 
+  /* Constants */
   const menuItems = [
     {
       label: "Light",
@@ -44,6 +51,7 @@ const ThemeModeSetting = (): JSX.Element => {
     },
   ];
 
+  /* Output */
   return (
     <div className="fixed bottom-8 right-8 z-50">
       <DropdownMenu>

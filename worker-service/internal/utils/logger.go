@@ -1,10 +1,14 @@
 package utils
 
+// ----------------------------------------------------------------------
+
 import (
 	"os"
 
 	"github.com/sirupsen/logrus"
 )
+
+// ----------------------------------------------------------------------
 
 // Logger is a global logger instance
 var Logger *logrus.Logger

@@ -1,5 +1,8 @@
 package config
 
+// ----------------------------------------------------------------------
+
+/* Imports */
 import (
 	"fmt"
 	"os"
@@ -8,18 +11,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds all configuration for the worker service
+// ----------------------------------------------------------------------
+
+/* Config holds all configuration for the worker service */
 type Config struct {
-	// Server configuration
+	// Server
 	Port     int
 	GinMode  string
 	LogLevel string
 
-	// Backend service configuration
+	// Backend service
 	BackendServiceURL   string
 	BackendWorkerAPIKey string
 
-	// MediaMTX configuration
+	// MediaMTX
 	MediaMTXHost       string
 	MediaMTXRTSPPort   int
 	MediaMTXHLSPort    int
@@ -27,39 +32,45 @@ type Config struct {
 	MediaMTXRTMPPort   int
 	MediaMTXAPIURL     string
 
-	// Stream processing configuration
+	// Stream processing
 	MaxConcurrentStreams int
-	FrameSkipInterval    int
-	StreamConnectTimeout int // seconds
 
-	// Storage configuration
-	SnapshotStoragePath string
+	// Face detection
+	FaceDetectionModelPath string
+
+	// Cloudinary
+	CloudinaryCloudName string
+	CloudinaryAPIKey    string
+	CloudinaryAPISecret string
+	CloudinaryFolder    string
 }
 
-// LoadConfig loads configuration from environment variables
+// ----------------------------------------------------------------------
+
+/* LoadConfig loads configuration from environment variables */
 func LoadConfig() (*Config, error) {
-	// Load .env file if it exists (optional)
 	_ = godotenv.Load()
 
 	config := &Config{
-		Port:                 getEnvInt("WORKER_SERVICE_PORT", 5000),
-		GinMode:              getEnvString("GIN_MODE", "debug"),
-		LogLevel:             getEnvString("LOG_LEVEL", "info"),
-		BackendServiceURL:    getEnvString("BACKEND_SERVICE_URL", "http://backend:3000"),
-		BackendWorkerAPIKey:  getEnvString("BACKEND_WORKER_API_KEY", ""),
-		MediaMTXHost:         getEnvString("MEDIAMTX_HOST", "localhost"),
-		MediaMTXRTSPPort:     getEnvInt("MEDIAMTX_RTSP_PORT", 8554),
-		MediaMTXHLSPort:      getEnvInt("MEDIAMTX_HLS_PORT", 8888),
-		MediaMTXWebRTCPort:   getEnvInt("MEDIAMTX_WEBRTC_PORT", 8889),
-		MediaMTXRTMPPort:     getEnvInt("MEDIAMTX_RTMP_PORT", 1935),
-		MediaMTXAPIURL:       getEnvString("MEDIAMTX_API_URL", "http://mediamtx:9997"),
-		MaxConcurrentStreams: getEnvInt("MAX_CONCURRENT_STREAMS", 4),
-		FrameSkipInterval:    getEnvInt("FRAME_SKIP_INTERVAL", 2),
-		StreamConnectTimeout: getEnvInt("STREAM_CONNECT_TIMEOUT", 30),
-		SnapshotStoragePath:  getEnvString("SNAPSHOT_STORAGE_PATH", "/tmp/visionguard/snapshots"),
+		Port:                   getEnvInt("WORKER_SERVICE_PORT", 5000),
+		GinMode:                getEnvString("GIN_MODE", "debug"),
+		LogLevel:               getEnvString("LOG_LEVEL", "info"),
+		BackendServiceURL:      getEnvString("BACKEND_SERVICE_URL", "http://visionguard-backend:3000"),
+		BackendWorkerAPIKey:    getEnvString("BACKEND_WORKER_API_KEY", ""),
+		MediaMTXHost:           getEnvString("MEDIAMTX_HOST", "visionguard-mediamtx"),
+		MediaMTXRTSPPort:       getEnvInt("MEDIAMTX_RTSP_PORT", 8554),
+		MediaMTXHLSPort:        getEnvInt("MEDIAMTX_HLS_PORT", 8888),
+		MediaMTXWebRTCPort:     getEnvInt("MEDIAMTX_WEBRTC_PORT", 8889),
+		MediaMTXRTMPPort:       getEnvInt("MEDIAMTX_RTMP_PORT", 1935),
+		MediaMTXAPIURL:         getEnvString("MEDIAMTX_API_URL", "http://visionguard-mediamtx:9997"),
+		MaxConcurrentStreams:   getEnvInt("MAX_CONCURRENT_STREAMS", 4),
+		FaceDetectionModelPath: getEnvString("FACE_DETECTION_MODEL_PATH", "/app/models"),
+		CloudinaryCloudName:    getEnvString("CLOUDINARY_CLOUD_NAME", ""),
+		CloudinaryAPIKey:       getEnvString("CLOUDINARY_API_KEY", ""),
+		CloudinaryAPISecret:    getEnvString("CLOUDINARY_API_SECRET", ""),
+		CloudinaryFolder:       getEnvString("CLOUDINARY_FOLDER", "visionguard/snapshots"),
 	}
 
-	// Validate configuration
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
@@ -67,7 +78,9 @@ func LoadConfig() (*Config, error) {
 	return config, nil
 }
 
-// Validate performs basic validation of configuration
+// ----------------------------------------------------------------------
+
+/* Validate performs basic validation of configuration */
 func (c *Config) Validate() error {
 	if c.Port < 1 || c.Port > 65535 {
 		return fmt.Errorf("invalid port: %d", c.Port)
@@ -85,14 +98,12 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("MAX_CONCURRENT_STREAMS must be at least 1")
 	}
 
-	if c.FrameSkipInterval < 1 {
-		return fmt.Errorf("FRAME_SKIP_INTERVAL must be at least 1")
-	}
-
 	return nil
 }
 
-// Helper functions
+// ----------------------------------------------------------------------
+
+/* Helper functions for environment variable retrieval */
 func getEnvString(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

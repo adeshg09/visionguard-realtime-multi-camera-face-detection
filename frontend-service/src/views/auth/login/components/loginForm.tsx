@@ -1,5 +1,5 @@
 /* Imports */
-import { memo, type JSX } from "react";
+import { memo, type JSX, useState } from "react";
 
 /* Relative Imports */
 import { useForm } from "react-hook-form";
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { typography } from "@/theme/typography";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { Eye, EyeOff } from "lucide-react";
 
 // ----------------------------------------------------------------------
 
@@ -40,6 +41,9 @@ export interface LogInFormProps {
  * @returns {JSX.Element}
  */
 const LogInForm = ({ onSubmitSuccess }: LogInFormProps): JSX.Element => {
+  /* State */
+  const [showPassword, setShowPassword] = useState(false);
+
   /* Hooks */
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(LoginFormSchema),
@@ -67,6 +71,10 @@ const LogInForm = ({ onSubmitSuccess }: LogInFormProps): JSX.Element => {
     }
   };
 
+  const togglePasswordVisibility = (): void => {
+    setShowPassword((prev) => !prev);
+  };
+
   /* Output */
   return (
     <div className="w-full max-w-md mx-auto">
@@ -89,6 +97,7 @@ const LogInForm = ({ onSubmitSuccess }: LogInFormProps): JSX.Element => {
                     {...field}
                     type="text"
                     placeholder="Enter your username"
+                    className="focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
                 </FormControl>
                 <FormMessage />
@@ -106,11 +115,29 @@ const LogInForm = ({ onSubmitSuccess }: LogInFormProps): JSX.Element => {
                   Password
                 </FormLabel>
                 <FormControl>
-                  <Input
-                    {...field}
-                    type="password"
-                    placeholder="Enter your password"
-                  />
+                  <div className="relative group">
+                    <Input
+                      {...field}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      className="pr-10 focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors duration-200 focus:outline-none focus:text-foreground"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                      tabIndex={-1} // Prevent tab focus on the button
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
+                      ) : (
+                        <Eye className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
+                      )}
+                    </button>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -127,9 +154,10 @@ const LogInForm = ({ onSubmitSuccess }: LogInFormProps): JSX.Element => {
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                    className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
                 </FormControl>
-                <FormLabel className="text-sm font-medium cursor-pointer">
+                <FormLabel className="text-sm font-medium cursor-pointer hover:text-primary transition-colors">
                   Remember me
                 </FormLabel>
               </FormItem>
@@ -139,7 +167,7 @@ const LogInForm = ({ onSubmitSuccess }: LogInFormProps): JSX.Element => {
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full rounded-[10px]"
+            className="w-full rounded-[10px] h-11 text-base font-medium transition-all duration-200 hover:shadow-lg"
             disabled={loginMutation.isPending}
           >
             {loginMutation.isPending ? (

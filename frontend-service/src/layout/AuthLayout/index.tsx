@@ -1,11 +1,7 @@
 /* Imports */
 import React, { type JSX } from "react";
 
-/* Relative Imports */
-// import clsx from "clsx";
-
 /* Local Imports */
-// import { typography } from "@/theme/typography";
 import AuthLayoutBackground from "@/assets/images/authLayoutBackground.jpg";
 
 // ----------------------------------------------------------------------

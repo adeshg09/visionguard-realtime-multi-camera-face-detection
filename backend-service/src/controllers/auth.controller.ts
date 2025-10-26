@@ -1,5 +1,10 @@
+/* Imports */
 import type { Context } from "hono";
+
+/* Relative Imports */
 import { PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import { successResponse, errorResponse } from "@/utils/response.js";
 import {
   RESPONSE_ERROR_MESSAGES,
@@ -10,8 +15,26 @@ import {
 import type { LoginRequest } from "@/dtos/auth.dto.js";
 import { createAuthService } from "@/services/auth.service.js";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Controller to handle all auth-related operations.
+ *
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {object} - Auth controller with all handlers
+ */
+
 export const createAuthController = (prisma: PrismaClient) => {
+  /* Services */
   const authService = createAuthService(prisma);
+
+  // ----------------------------------------------------------------------
+
+  /**
+   * Login a user.
+   *
+   * @route POST /api/auth/login
+   */
 
   const login = async (c: Context) => {
     try {
@@ -21,8 +44,8 @@ export const createAuthController = (prisma: PrismaClient) => {
       return successResponse(
         c,
         STATUS_CODES.OK,
+        RESPONSE_MESSAGES.SUCCESS,
         RESPONSE_SUCCESS_MESSAGES.LOGIN_SUCCESS,
-        "Login successful",
         result
       );
     } catch (error) {
@@ -35,6 +58,11 @@ export const createAuthController = (prisma: PrismaClient) => {
     }
   };
 
+  /**
+   * Get user profile.
+   *
+   * @route GET /api/auth/get-profile
+   */
   const getProfile = async (c: Context) => {
     try {
       const user = c.get("user");
@@ -45,7 +73,7 @@ export const createAuthController = (prisma: PrismaClient) => {
         c,
         STATUS_CODES.OK,
         RESPONSE_MESSAGES.SUCCESS,
-        "User information retrieved successfully",
+        RESPONSE_SUCCESS_MESSAGES.USER_INFO_FETCHED,
         profile
       );
     } catch (error) {
@@ -58,6 +86,9 @@ export const createAuthController = (prisma: PrismaClient) => {
     }
   };
 
+  // ----------------------------------------------------------------------
+
+  /* Return all controller functions */
   return {
     login,
     getProfile,
