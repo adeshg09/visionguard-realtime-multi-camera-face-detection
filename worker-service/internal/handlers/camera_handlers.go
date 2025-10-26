@@ -3,7 +3,9 @@ package handlers
 // ----------------------------------------------------------------------
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"worker-service/internal/models"
 	"worker-service/internal/services"
 	"worker-service/internal/utils"
@@ -114,30 +116,58 @@ func (h *CameraHandler) ToggleFaceDetection(c *gin.Context) {
 		return
 	}
 
-	var req models.ToggleFaceDetectionRequest
+	var requestBody map[string]interface{}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Warnf("Invalid face detection toggle request: %v", err)
-		utils.ErrorBadRequest(c, fmt.Errorf("invalid request payload: enabled field is required"))
+	if err := c.BindJSON(&requestBody); err != nil {
+		bodyBytes, _ := io.ReadAll(c.Request.Body)
+		logger.Infof("📦 Raw body: %s", string(bodyBytes))
+
+		var manualReq struct {
+			Enabled bool `json:"enabled"`
+		}
+		if err := json.Unmarshal(bodyBytes, &manualReq); err != nil {
+			utils.ErrorBadRequest(c, fmt.Errorf("invalid JSON: %v", err))
+			return
+		}
+
+		if err := h.streamManager.ToggleFaceDetection(cameraID, manualReq.Enabled); err != nil {
+			utils.ErrorNotFound(c, err)
+			return
+		}
+
+		resp := map[string]interface{}{
+			"cameraId":             cameraID,
+			"faceDetectionEnabled": manualReq.Enabled,
+		}
+
+		message := "Face detection enabled"
+		if !manualReq.Enabled {
+			message = "Face detection disabled"
+		}
+
+		utils.SuccessOK(c, message, resp)
 		return
 	}
 
-	logger.Infof("Toggling face detection for camera %s to %v", cameraID, req.Enabled)
+	enabled, ok := requestBody["enabled"].(bool)
+	if !ok {
+		utils.ErrorBadRequest(c, fmt.Errorf("enabled field must be a boolean"))
+		return
+	}
 
-	if err := h.streamManager.ToggleFaceDetection(cameraID, req.Enabled); err != nil {
-		logger.Errorf("Failed to toggle face detection for camera %s: %v", cameraID, err)
+	if err := h.streamManager.ToggleFaceDetection(cameraID, enabled); err != nil {
 		utils.ErrorNotFound(c, err)
 		return
 	}
 
 	resp := map[string]interface{}{
 		"cameraId":             cameraID,
-		"faceDetectionEnabled": req.Enabled,
+		"faceDetectionEnabled": enabled,
 	}
 
-	message := "Face detection enabled successfully"
-	if !req.Enabled {
-		message = "Face detection disabled successfully"
+	message := "Face detection enabled"
+	if !enabled {
+		message = "Face detection disabled"
 	}
 
 	utils.SuccessOK(c, message, resp)

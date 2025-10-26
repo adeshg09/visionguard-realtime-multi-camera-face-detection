@@ -1,11 +1,6 @@
 /* Imports */
 import { type JSX, useRef, useEffect } from "react";
-import {
-  AlertTriangle,
-  ExternalLink,
-  MoreVertical,
-  History,
-} from "lucide-react";
+import { AlertTriangle, MoreVertical, History } from "lucide-react";
 
 /* Local Imports */
 import { Badge } from "@/components/ui/badge";
@@ -132,11 +127,10 @@ const CameraLiveAlerts = ({
         <Button
           variant="ghost"
           size="sm"
-          className="w-full mt-2 h-7 text-xs hover:bg-muted"
+          className="w-full mt-2 h-7 text-xs hover:bg-muted flex flex-row gap-4"
           onClick={onViewAllLive}
         >
-          View All Live Alerts ({alerts.length})
-          <ExternalLink className="w-3 h-3 ml-1" />
+          <h3>View All Live Alerts ({alerts.length})</h3>
         </Button>
       )}
     </div>

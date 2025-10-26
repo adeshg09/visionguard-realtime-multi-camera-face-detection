@@ -6,7 +6,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 /* Interface */
 interface CameraState {
   cameras: any[];
-  loadingCameras: Set<string>;
+  loadingCameras: string[];
   selectedCamera: any | null;
   liveAlerts: Record<string, any[]>;
   todayAlertsCounts: Record<string, number>;
@@ -16,7 +16,7 @@ interface CameraState {
 
 const initialState: CameraState = {
   cameras: [],
-  loadingCameras: new Set<string>(),
+  loadingCameras: [],
   selectedCamera: null,
   liveAlerts: {},
   todayAlertsCounts: {},
@@ -46,13 +46,15 @@ const cameraSlice = createSlice({
     },
 
     addLoadingCamera: (state, action: PayloadAction<string>) => {
-      state.loadingCameras = new Set(state.loadingCameras).add(action.payload);
+      if (!state.loadingCameras.includes(action.payload)) {
+        state.loadingCameras.push(action.payload);
+      }
     },
 
     removeLoadingCamera: (state, action: PayloadAction<string>) => {
-      const newSet = new Set(state.loadingCameras);
-      newSet.delete(action.payload);
-      state.loadingCameras = newSet;
+      state.loadingCameras = state.loadingCameras.filter(
+        (id) => id !== action.payload
+      );
     },
 
     setSelectedCamera: (state, action: PayloadAction<any | null>) => {

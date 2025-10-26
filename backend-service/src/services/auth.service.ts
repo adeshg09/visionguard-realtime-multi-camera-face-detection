@@ -37,7 +37,7 @@ export const createAuthService = (prisma: PrismaClient) => {
       });
 
       if (!user) {
-        throw new Error(RESPONSE_ERROR_MESSAGES.INVALID_CREDENTIALS);
+        throw new Error(RESPONSE_ERROR_MESSAGES.USER_NOT_FOUND);
       }
 
       const isPasswordValid = await comparePassword(

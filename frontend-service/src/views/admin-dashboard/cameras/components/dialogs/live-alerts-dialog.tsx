@@ -1,6 +1,6 @@
 /* Imports */
 import { type JSX, useState } from "react";
-import { X, Zap, ChevronLeft, ChevronRight } from "lucide-react";
+import { Zap, ChevronLeft, ChevronRight } from "lucide-react";
 
 /* Local Imports */
 import {
@@ -73,13 +73,13 @@ const LiveAlertsDialog = ({
                 </p>
               </div>
             </div>
-            <Button
+            {/* <Button
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
             >
               <X className="w-4 h-4" />
-            </Button>
+            </Button> */}
           </div>
         </DialogHeader>
 

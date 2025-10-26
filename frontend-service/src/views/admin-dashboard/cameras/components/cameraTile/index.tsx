@@ -7,7 +7,7 @@ import { useAppSelector, useAppDispatch } from "@/hooks/use-store";
 import { useCamera } from "@/hooks/dashboard/use-camera";
 import { useWebSocket } from "@/hooks/use-websocket";
 import type { AlertNotification } from "@/models";
-import Toast from "@/components/toast";
+// import Toast from "@/components/toast";
 import CameraHeader from "./camera-header";
 import CameraStatusBadges from "./camera-status-badges";
 import CameraVideoStream from "./camera-video-stream";
@@ -64,7 +64,7 @@ const CameraTile = ({
     useWebSocket();
 
   /* Constants */
-  const isLoading = loadingCameras.has(camera.id);
+  const isLoading = loadingCameras.includes(camera.id);
   const isStreaming = camera.isOnline;
   const isActive = camera.isActive;
 
@@ -124,10 +124,10 @@ const CameraTile = ({
           );
           dispatch(cameraSliceActions.incrementTodayAlertsCount(camera.id));
 
-          Toast.info({
-            message: `New Alert - ${alertData.data.cameraName}`,
-            description: `${alertData.data.faceCount} face(s) detected`,
-          });
+          // Toast.info({
+          //   message: `New Alert - ${alertData.data.cameraName}`,
+          //   description: `${alertData.data.faceCount} face(s) detected`,
+          // });
         }
       }
     },

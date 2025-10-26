@@ -46,7 +46,7 @@ const ManageCamera = (): JSX.Element => {
   const handleGetCameras = useCallback(async (): Promise<void> => {
     const response = await getAllCamerasMutation.mutateAsync();
     dispatch(cameraSliceActions.setCameras(response.data.cameras));
-  }, [getAllCamerasMutation, dispatch]);
+  }, [getAllCamerasMutation]);
 
   /**
    * Function to navigate to add camera page.
@@ -125,7 +125,7 @@ const ManageCamera = (): JSX.Element => {
   /* Side-Effects */
   useEffect(() => {
     handleGetCameras();
-  }, [handleGetCameras]);
+  }, []);
 
   /* Output */
   return (

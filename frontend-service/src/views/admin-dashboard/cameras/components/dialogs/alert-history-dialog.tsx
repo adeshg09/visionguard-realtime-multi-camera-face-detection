@@ -1,11 +1,10 @@
 /* Imports */
 import { type JSX, useState, useEffect } from "react";
 import {
-  X,
   Calendar,
   Eye,
-  ChevronLeft,
-  ChevronRight,
+  // ChevronLeft,
+  // ChevronRight,
   History,
 } from "lucide-react";
 
@@ -134,13 +133,6 @@ const AlertHistoryDialog = ({
                 </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
           </div>
         </DialogHeader>
 
@@ -265,7 +257,7 @@ const AlertHistoryDialog = ({
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                 >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  {/* <ChevronLeft className="w-4 h-4 mr-1" /> */}
                   Previous
                 </Button>
                 <Button
@@ -275,7 +267,7 @@ const AlertHistoryDialog = ({
                   disabled={currentPage === totalPages}
                 >
                   Next
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                  {/* <ChevronRight className="w-4 h-4 ml-1" /> */}
                 </Button>
               </div>
             </div>

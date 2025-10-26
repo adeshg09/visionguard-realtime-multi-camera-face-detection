@@ -20,7 +20,7 @@ export const createServer = (): Hono => {
   // Global middlewares
   app.use(
     cors({
-      origin: envConfig.FRONTEND_SERVICE_URL || "*",
+      origin: "http://localhost:5173",
       allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
       allowHeaders: ["Content-Type", "Authorization"],
       credentials: true,
