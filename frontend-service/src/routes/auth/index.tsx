@@ -2,7 +2,7 @@
 import { lazy } from "react";
 
 /* Local Imports */
-import AuthLayout from "@/layout/AuthLayout";
+import AuthLayout from "@/layout/authLayout";
 import UserGuard from "../guards/userGuard";
 import { ROOT_PATH, PAGE_ROOT } from "../paths";
 

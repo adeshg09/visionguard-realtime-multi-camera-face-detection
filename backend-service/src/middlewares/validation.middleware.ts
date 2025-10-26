@@ -1,8 +1,22 @@
+/* Imports */
 import type { MiddlewareHandler } from "hono";
+
+/* Relative Imports */
 import { ZodType, ZodError } from "zod";
+
+/* Local Imports */
 import { logger } from "@/libs/logger.lib.js";
 import { RESPONSE_MESSAGES, STATUS_CODES } from "../constants/index.js";
 import { errorResponse } from "../utils/response.js";
+
+// ----------------------------------------------------------------------
+
+/**
+ * Middleware to validate request body using Zod schema.
+ *
+ * @param {ZodType<any>} schema - Zod schema to validate request body
+ * @return {MiddlewareHandler} - Middleware handler function
+ */
 
 export const validateBody = (schema: ZodType<any>): MiddlewareHandler => {
   return async (c, next) => {
@@ -33,6 +47,12 @@ export const validateBody = (schema: ZodType<any>): MiddlewareHandler => {
     }
   };
 };
+
+/** Middleware to validate query parameters using Zod schema.
+ *
+ * @param {ZodType<any>} schema - Zod schema to validate query parameters
+ * @return {MiddlewareHandler} - Middleware handler function
+ */
 
 export const validateQuery = (schema: ZodType<any>): MiddlewareHandler => {
   return async (c, next) => {

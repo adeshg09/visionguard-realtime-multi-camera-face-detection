@@ -3,7 +3,11 @@
   "info": {
     "title": "VisionGuard API",
     "version": "1.0.0",
-    "description": "API documentation for VisionGuard backend."
+    "description": "Comprehensive API documentation for VisionGuard - A real-time face detection and surveillance system with RTSP camera stream management, WebSocket-based real-time alerts, and comprehensive monitoring capabilities.",
+    "contact": {
+      "name": "VisionGuard API Support",
+      "email": "support@visionguard.builtbyag09.tech"
+    }
   },
   "servers": [
     {
@@ -16,23 +20,53 @@
     }
   ],
   "tags": [
-    { "name": "Health", "description": "Health check endpoints" },
-    { "name": "Auth", "description": "Authentication endpoints" },
-    { "name": "Camera", "description": "Camera management endpoints" }
+    {
+      "name": "Health",
+      "description": "Health check and service status endpoints"
+    },
+    {
+      "name": "Authentication",
+      "description": "User authentication and profile management"
+    },
+    {
+      "name": "Cameras",
+      "description": "Camera management, streaming control, and configuration"
+    },
+    {
+      "name": "Alerts",
+      "description": "Face detection alerts and statistics"
+    }
   ],
   "paths": {
     "/health": {
       "get": {
         "tags": ["Health"],
         "summary": "Health check",
-        "description": "Returns API health",
+        "description": "Returns the current health status of the VisionGuard backend service",
+        "operationId": "getHealth",
         "security": [],
         "responses": {
           "200": {
-            "description": "API is healthy.",
+            "description": "Service is healthy and operational",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/healthResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": {
+                    "response_code": 200,
+                    "response_message": "Success!"
+                  },
+                  "message": "VisionGuard Backend Service is running",
+                  "data": {
+                    "status": "healthy",
+                    "timestamp": "2025-10-26T10:30:00.000Z",
+                    "service": "VisionGuard Backend Service",
+                    "version": "1.0.0",
+                    "environment": "development"
+                  }
+                }
               }
             }
           }
@@ -41,94 +75,203 @@
     },
     "/auth/login": {
       "post": {
-        "tags": ["Auth"],
-        "summary": "Login user",
+        "tags": ["Authentication"],
+        "summary": "User login",
+        "description": "Authenticate user and receive access and refresh tokens",
+        "operationId": "login",
         "security": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/loginRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "username": "admin",
+                "password": "password123"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Login successful.",
+            "description": "Login successful",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/loginResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
               }
             }
           },
-          "401": { "description": "Unauthorized" }
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": {
+                    "response_code": 401,
+                    "response_message": "Unauthorized!"
+                  },
+                  "message": "Invalid credentials",
+                  "error": {
+                    "message": "Invalid credentials",
+                    "stack": "Error: Invalid credentials..."
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
     "/auth/get-profile": {
       "get": {
-        "tags": ["Auth"],
-        "summary": "Get current user profile information",
-        "security": [{ "bearerAuth": [] }],
+        "tags": ["Authentication"],
+        "summary": "Get user profile",
+        "description": "Retrieve the authenticated user's profile information",
+        "operationId": "getProfile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "User information.",
+            "description": "User profile retrieved successfully",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/profileResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
               }
             }
           },
-          "401": { "description": "Unauthorized" }
+          "401": {
+            "description": "Unauthorized - Invalid or missing token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/cameras/create-camera": {
       "post": {
-        "tags": ["Camera"],
-        "summary": "Create camera",
-        "security": [{ "bearerAuth": [] }],
+        "tags": ["Cameras"],
+        "summary": "Create a new camera",
+        "description": "Add a new RTSP camera to the system",
+        "operationId": "createCamera",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/createCameraRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateCameraRequest"
+              },
+              "example": {
+                "name": "Front Door Camera",
+                "rtspUrl": "rtsp://192.168.1.100:554/stream1",
+                "location": "Main Entrance",
+                "description": "Primary entrance monitoring camera",
+                "isActive": true
+              }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Camera created.",
+            "description": "Camera created successfully",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/cameraResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/CameraResponse"
+                }
               }
             }
           },
-          "400": { "description": "Bad request" }
+          "400": {
+            "description": "Bad request - Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/cameras/get-cameras": {
       "get": {
-        "tags": ["Camera"],
-        "summary": "Get all cameras (paginated)",
-        "security": [{ "bearerAuth": [] }],
+        "tags": ["Cameras"],
+        "summary": "Get all cameras",
+        "description": "Retrieve a paginated list of cameras for the authenticated user",
+        "operationId": "getCameras",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "page",
             "in": "query",
-            "schema": { "type": "integer", "default": 1 }
+            "description": "Page number (starts from 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
           },
           {
             "name": "limit",
             "in": "query",
-            "schema": { "type": "integer", "default": 10 }
+            "description": "Number of items per page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
           },
-          { "name": "sortBy", "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Field to sort by",
+            "schema": {
+              "type": "string",
+              "default": "createdAt"
+            }
+          },
           {
             "name": "sortOrder",
             "in": "query",
+            "description": "Sort order",
             "schema": {
               "type": "string",
               "enum": ["asc", "desc"],
@@ -138,18 +281,21 @@
         ],
         "responses": {
           "200": {
-            "description": "List of cameras.",
+            "description": "Cameras retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "cameras": {
-                      "type": "array",
-                      "items": { "$ref": "#/components/schemas/cameraResponse" }
-                    },
-                    "pagination": { "$ref": "#/components/schemas/pagination" }
-                  }
+                  "$ref": "#/components/schemas/CamerasListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -159,118 +305,907 @@
     },
     "/cameras/get-camera-by-id/{id}": {
       "get": {
-        "tags": ["Camera"],
+        "tags": ["Cameras"],
         "summary": "Get camera by ID",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Retrieve detailed information about a specific camera",
+        "operationId": "getCameraById",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Camera details.",
+            "description": "Camera retrieved successfully",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/cameraResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/CameraDetailResponse"
+                }
               }
             }
           },
-          "404": { "description": "Camera not found" }
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camera not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/cameras/update-camera/{id}": {
-      "put": {
-        "tags": ["Camera"],
+      "patch": {
+        "tags": ["Cameras"],
         "summary": "Update camera",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Update camera details and configuration",
+        "operationId": "updateCamera",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/updateCameraRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCameraRequest"
+              },
+              "example": {
+                "name": "Updated Camera Name",
+                "location": "New Location",
+                "description": "Updated description",
+                "isActive": true
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Camera updated.",
+            "description": "Camera updated successfully",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/cameraResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/CameraResponse"
+                }
               }
             }
           },
-          "404": { "description": "Camera not found" }
+          "400": {
+            "description": "Bad request - Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camera not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/cameras/delete-camera/{id}": {
       "delete": {
-        "tags": ["Camera"],
+        "tags": ["Cameras"],
         "summary": "Delete camera",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Delete a camera and stop its stream if active",
+        "operationId": "deleteCamera",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "200": { "description": "Camera deleted." },
-          "404": { "description": "Camera not found" }
+          "200": {
+            "description": "Camera deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camera not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/cameras/start-stream/{id}": {
       "post": {
-        "tags": ["Camera"],
+        "tags": ["Cameras"],
         "summary": "Start camera stream",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Start streaming from a camera and enable face detection",
+        "operationId": "startStream",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "200": { "description": "Stream started." },
-          "404": { "description": "Camera not found" }
+          "200": {
+            "description": "Stream started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartStreamResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to start stream",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camera not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/cameras/stop-stream/{id}": {
       "post": {
-        "tags": ["Camera"],
+        "tags": ["Cameras"],
         "summary": "Stop camera stream",
-        "security": [{ "bearerAuth": [] }],
+        "description": "Stop an active camera stream",
+        "operationId": "stopStream",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "200": { "description": "Stream stopped." },
-          "404": { "description": "Camera not found" }
+          "200": {
+            "description": "Stream stopped successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopStreamResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to stop stream",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camera not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cameras/get-stream-status/{id}": {
+      "get": {
+        "tags": ["Cameras"],
+        "summary": "Get stream status",
+        "description": "Retrieve the current streaming status of a camera",
+        "operationId": "getStreamStatus",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to fetch stream status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cameras/toggle-face-detection/{id}": {
+      "post": {
+        "tags": ["Cameras"],
+        "summary": "Toggle face detection",
+        "description": "Enable or disable face detection for a camera stream",
+        "operationId": "toggleFaceDetection",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFaceDetectionRequest"
+              },
+              "example": {
+                "enabled": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Face detection toggled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to toggle face detection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camera not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cameras/update-fps/{id}": {
+      "post": {
+        "tags": ["Cameras"],
+        "summary": "Update FPS settings",
+        "description": "Update the target frames per second for a camera stream",
+        "operationId": "updateFps",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFpsRequest"
+              },
+              "example": {
+                "targetFPS": 30
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "FPS updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to update FPS or FPS exceeds camera maximum",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Camera not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts/create-alert": {
+      "post": {
+        "tags": ["Alerts"],
+        "summary": "Create alert",
+        "description": "Create a new face detection alert (Worker service endpoint - requires API key)",
+        "operationId": "createAlert",
+        "security": [
+          {
+            "workerApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAlertRequest"
+              },
+              "example": {
+                "cameraId": "clxxxx123456",
+                "faceCount": 2,
+                "confidence": 0.92,
+                "snapshotUrl": "https://storage.example.com/snapshots/alert-123.jpg",
+                "metadata": {
+                  "detectionTime": "2025-10-26T10:30:00.000Z",
+                  "processingDuration": 45
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Alert created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Validation error or camera not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts/get-alerts": {
+      "get": {
+        "tags": ["Alerts"],
+        "summary": "Get all alerts",
+        "description": "Retrieve a paginated and filtered list of alerts",
+        "operationId": "getAlerts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cameraId",
+            "in": "query",
+            "description": "Filter by camera ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "Filter alerts from this date (ISO 8601)",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "Filter alerts until this date (ISO 8601)",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "minConfidence",
+            "in": "query",
+            "description": "Minimum confidence threshold (0-1)",
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (starts from 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of items per page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Field to sort by",
+            "schema": {
+              "type": "string",
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "description": "Sort order",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alerts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts/get-alert-by-id/{id}": {
+      "get": {
+        "tags": ["Alerts"],
+        "summary": "Get alert by ID",
+        "description": "Retrieve detailed information about a specific alert",
+        "operationId": "getAlertById",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Alert ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alert retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Alert not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts/get-recent-alerts-by-camera/{cameraId}": {
+      "get": {
+        "tags": ["Alerts"],
+        "summary": "Get recent alerts by camera",
+        "description": "Retrieve recent alerts for a specific camera",
+        "operationId": "getRecentAlertsByCamera",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cameraId",
+            "in": "path",
+            "required": true,
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of recent alerts to retrieve",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent alerts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentAlertsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to retrieve alerts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alerts/get-camera-alert-stats/{cameraId}": {
+      "get": {
+        "tags": ["Alerts"],
+        "summary": "Get camera alert statistics",
+        "description": "Retrieve statistical information about alerts for a specific camera",
+        "operationId": "getCameraAlertStats",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cameraId",
+            "in": "path",
+            "required": true,
+            "description": "Camera ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alert statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertStatsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to retrieve statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -280,98 +1215,972 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "JWT authentication token obtained from /auth/login endpoint"
+      },
+      "workerApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Backend-Worker-API-Key",
+        "description": "API key for worker service authentication"
       }
     },
     "schemas": {
-      "healthResponse": {
+      "HealthResponse": {
         "type": "object",
         "properties": {
-          "status": { "type": "string" },
-          "timestamp": { "type": "string", "format": "date-time" },
-          "service": { "type": "string" }
-        }
-      },
-      "loginRequest": {
-        "type": "object",
-        "properties": {
-          "username": { "type": "string" },
-          "password": { "type": "string" }
-        },
-        "required": ["username", "password"]
-      },
-      "loginResponse": {
-        "type": "object",
-        "properties": {
-          "user": { "$ref": "#/components/schemas/UserResponse" },
-          "token": {
+          "status": {
             "type": "object",
             "properties": {
-              "accessToken": { "type": "string" },
-              "refreshToken": { "type": "string" }
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "VisionGuard Backend Service is running"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "example": "healthy"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2025-10-26T10:30:00.000Z"
+              },
+              "service": {
+                "type": "string",
+                "example": "VisionGuard Backend Service"
+              },
+              "version": {
+                "type": "string",
+                "example": "1.0.0"
+              },
+              "environment": {
+                "type": "string",
+                "example": "development"
+              }
             }
           }
         }
       },
-      "profileResponse": {
+      "LoginRequest": {
         "type": "object",
+        "required": ["username", "password"],
         "properties": {
-          "id": { "type": "string" },
-          "username": { "type": "string" },
-          "email": { "type": "string" },
-          "role": { "type": "string" }
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 50,
+            "example": "admin"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "example": "password123"
+          }
         }
       },
-      "createCameraRequest": {
+      "LoginResponse": {
         "type": "object",
         "properties": {
-          "name": { "type": "string" },
-          "rtspUrl": { "type": "string" },
-          "location": { "type": "string" },
-          "description": { "type": "string" },
-          "resolution": { "type": "string" },
-          "fps": { "type": "integer" }
-        },
-        "required": ["name", "rtspUrl"]
-      },
-      "updateCameraRequest": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string" },
-          "rtspUrl": { "type": "string" },
-          "location": { "type": "string" },
-          "description": { "type": "string" },
-          "resolution": { "type": "string" },
-          "fps": { "type": "integer" },
-          "isActive": { "type": "boolean" }
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Login successful"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "example": "clxxxx123456"
+                  },
+                  "username": {
+                    "type": "string",
+                    "example": "admin"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "admin@visionguard.com"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": ["admin", "viewer", "operator"],
+                    "example": "admin"
+                  }
+                }
+              },
+              "tokens": {
+                "type": "object",
+                "properties": {
+                  "accessToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  },
+                  "refreshToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
         }
       },
-      "cameraResponse": {
+      "ProfileResponse": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "rtspUrl": { "type": "string" },
-          "location": { "type": "string" },
-          "description": { "type": "string" },
-          "isActive": { "type": "boolean" },
-          "isOnline": { "type": "boolean" },
-          "resolution": { "type": "string" },
-          "fps": { "type": "integer" },
-          "createdAt": { "type": "string", "format": "date-time" },
-          "updatedAt": { "type": "string", "format": "date-time" }
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "User information fetched successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "clxxxx123456"
+              },
+              "username": {
+                "type": "string",
+                "example": "admin"
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "example": "admin@visionguard.com"
+              },
+              "role": {
+                "type": "string",
+                "enum": ["admin", "viewer", "operator"],
+                "example": "admin"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2025-10-24T10:30:00.000Z"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2025-10-24T10:30:00.000Z"
+              }
+            }
+          }
         }
       },
-      "pagination": {
+      "CreateCameraRequest": {
+        "type": "object",
+        "required": ["name", "rtspUrl"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "Front Door Camera"
+          },
+          "rtspUrl": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^rtsp://",
+            "example": "rtsp://192.168.1.100:554/stream1"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200,
+            "example": "Main Entrance"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "Primary entrance monitoring camera"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true,
+            "example": true
+          }
+        }
+      },
+      "UpdateCameraRequest": {
         "type": "object",
         "properties": {
-          "page": { "type": "integer" },
-          "limit": { "type": "integer" },
-          "totalRecords": { "type": "integer" },
-          "totalPages": { "type": "integer" }
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "Updated Camera Name"
+          },
+          "rtspUrl": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^rtsp://",
+            "example": "rtsp://192.168.1.101:554/stream1"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200,
+            "example": "Updated Location"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "example": "Updated description"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "CameraResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Camera created successfully"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Camera"
+          }
+        }
+      },
+      "Camera": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clxxxx123456"
+          },
+          "name": {
+            "type": "string",
+            "example": "Front Door Camera"
+          },
+          "rtspUrl": {
+            "type": "string",
+            "example": "rtsp://192.168.1.100:554/stream1"
+          },
+          "location": {
+            "type": "string",
+            "nullable": true,
+            "example": "Main Entrance"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Primary entrance monitoring camera"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "isOnline": {
+            "type": "boolean",
+            "example": false
+          },
+          "faceDetectionEnabled": {
+            "type": "boolean",
+            "example": true
+          },
+          "targetFPS": {
+            "type": "integer",
+            "example": 30
+          },
+          "maxFPS": {
+            "type": "integer",
+            "example": 30
+          },
+          "webrtcUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "hlsUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "rtmpUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "lastOnlineAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": null
+          },
+          "lastOfflineAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-10-24T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-10-24T10:30:00.000Z"
+          },
+          "userId": {
+            "type": "string",
+            "example": "clxxxx123456"
+          }
+        }
+      },
+      "CamerasListResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Cameras retrieved successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "cameras": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Camera"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination"
+              }
+            }
+          }
+        }
+      },
+      "CameraDetailResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Camera retrieved successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "camera": {
+                "$ref": "#/components/schemas/Camera"
+              }
+            }
+          }
+        }
+      },
+      "StartStreamResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Stream started successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "camera": {
+                "$ref": "#/components/schemas/Camera"
+              }
+            }
+          }
+        }
+      },
+      "StopStreamResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Stream stopped successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "camera": {
+                "$ref": "#/components/schemas/Camera"
+              }
+            }
+          }
+        }
+      },
+      "StreamStatusResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Stream status fetched successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "cameraId": {
+                "type": "string",
+                "example": "clxxxx123456"
+              },
+              "isStreaming": {
+                "type": "boolean",
+                "example": true
+              },
+              "currentFPS": {
+                "type": "integer",
+                "example": 30
+              },
+              "faceDetectionActive": {
+                "type": "boolean",
+                "example": true
+              }
+            }
+          }
+        }
+      },
+      "ToggleFaceDetectionRequest": {
+        "type": "object",
+        "required": ["enabled"],
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "UpdateFpsRequest": {
+        "type": "object",
+        "required": ["targetFPS"],
+        "properties": {
+          "targetFPS": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "example": 30
+          }
+        }
+      },
+      "CreateAlertRequest": {
+        "type": "object",
+        "required": ["cameraId", "faceCount", "confidence"],
+        "properties": {
+          "cameraId": {
+            "type": "string",
+            "minLength": 1,
+            "example": "clxxxx123456"
+          },
+          "faceCount": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 2
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.92
+          },
+          "snapshotUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "example": "https://storage.example.com/snapshots/alert-123.jpg"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "detectionTime": "2025-10-26T10:30:00.000Z",
+              "processingDuration": 45
+            }
+          }
+        }
+      },
+      "AlertResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 201
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Alert created successfully"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Alert"
+          }
+        }
+      },
+      "Alert": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clxxxx789012"
+          },
+          "cameraId": {
+            "type": "string",
+            "example": "clxxxx123456"
+          },
+          "faceCount": {
+            "type": "integer",
+            "example": 2
+          },
+          "confidence": {
+            "type": "number",
+            "example": 0.92
+          },
+          "snapshotUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://storage.example.com/snapshots/alert-123.jpg"
+          },
+          "metadata": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "example": {
+              "detectionTime": "2025-10-26T10:30:00.000Z",
+              "processingDuration": 45
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-10-26T10:30:00.000Z"
+          },
+          "camera": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "clxxxx123456"
+              },
+              "name": {
+                "type": "string",
+                "example": "Front Door Camera"
+              },
+              "location": {
+                "type": "string",
+                "nullable": true,
+                "example": "Main Entrance"
+              }
+            }
+          }
+        }
+      },
+      "AlertsListResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Alerts retrieved successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "alerts": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Alert"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination"
+              }
+            }
+          }
+        }
+      },
+      "AlertDetailResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Alert retrieved successfully"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Alert"
+          }
+        }
+      },
+      "RecentAlertsResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Alerts retrieved successfully"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Alert"
+            }
+          }
+        }
+      },
+      "AlertStatsResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Camera alert stats retrieved successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "totalAlerts": {
+                "type": "integer",
+                "example": 150
+              },
+              "todayAlerts": {
+                "type": "integer",
+                "example": 12
+              },
+              "averageConfidence": {
+                "type": "number",
+                "example": 0.87
+              }
+            }
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 10
+          },
+          "totalRecords": {
+            "type": "integer",
+            "example": 45
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 5
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 200
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Success!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation completed successfully"
+          },
+          "data": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 400
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Bad Request!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation failed"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string",
+                "example": "Detailed error message"
+              },
+              "stack": {
+                "type": "string",
+                "example": "Error: Detailed error message\n    at ..."
+              }
+            }
+          }
+        }
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "response_code": {
+                "type": "integer",
+                "example": 400
+              },
+              "response_message": {
+                "type": "string",
+                "example": "Validation Error!"
+              }
+            }
+          },
+          "message": {
+            "type": "string",
+            "example": "Validation failed"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string",
+                "example": "Validation failed"
+              },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "too_small"
+                    },
+                    "minimum": {
+                      "type": "integer",
+                      "example": 1
+                    },
+                    "type": {
+                      "type": "string",
+                      "example": "string"
+                    },
+                    "inclusive": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "exact": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Camera name is required"
+                    },
+                    "path": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": ["name"]
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
   },
-  "security": [{ "bearerAuth": [] }]
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
 }

@@ -1,5 +1,7 @@
 package middleware
 
+// ----------------------------------------------------------------------
+
 import (
 	"net/http"
 	"worker-service/internal/config"
@@ -8,8 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// WorkerAuthMiddleware validates the backend worker API key
-func WorkerAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+// ----------------------------------------------------------------------
+
+// AuthMiddleware validates the backend worker API key
+func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger := utils.GetLogger()
 

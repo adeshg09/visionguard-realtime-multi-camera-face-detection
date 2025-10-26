@@ -1,7 +1,13 @@
+/* Imports */
 import dotenv from "dotenv";
+
+// ----------------------------------------------------------------------
 
 dotenv.config();
 
+// ----------------------------------------------------------------------
+
+/* Environment Variables */
 export const envConfig = {
   NODE_ENV: process.env.NODE_ENV,
 

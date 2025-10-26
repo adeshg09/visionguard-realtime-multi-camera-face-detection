@@ -5,12 +5,16 @@ export interface APIResponse<T = any> {
   error?: string;
 }
 
+// ----------------------------------------------------------------------
+
 export interface PaginationParams {
   page?: number;
   limit?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }
+
+// ----------------------------------------------------------------------
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -21,6 +25,8 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+// ----------------------------------------------------------------------
 
 export interface WorkerRequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";

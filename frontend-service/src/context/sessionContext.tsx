@@ -10,6 +10,7 @@ import {
   removeAccessToken,
 } from "@/utilities/auth";
 import { getUserProfileRequest } from "@/services/account/account";
+import { websocketService } from "@/lib/webSocket";
 
 // ----------------------------------------------------------------------
 
@@ -71,10 +72,14 @@ class Session extends React.Component<ISessionProps, ISessionState> {
         }));
 
         await this.getUserProfile();
+
+        websocketService.connect(token);
       },
 
       LogoutUser: () => {
         removeAccessToken();
+
+        websocketService.disconnect();
 
         this.setState((prevState) => ({
           ...prevState,
@@ -93,6 +98,8 @@ class Session extends React.Component<ISessionProps, ISessionState> {
   componentDidMount(): void {
     if (this.state.authToken) {
       this.getUserProfile();
+
+      websocketService.connect(this.state.authToken);
     } else {
       this.setState((prevState) => ({
         ...prevState,

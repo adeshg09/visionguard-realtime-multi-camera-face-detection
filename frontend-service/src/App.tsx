@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { Provider as ReduxProvider } from "react-redux";
 
 /* Local Imports */
 import { ThemeContextProvider } from "./context/themeContext";
@@ -13,6 +14,8 @@ import ThemeModeSetting from "./components/themeModeSetting";
 import { SessionProvider } from "./context/sessionContext";
 import Routing from "./routes";
 import { Toaster } from "@/components/ui/sonner";
+import store from "@/store";
+import { PWAInstallPrompt } from "./components/pwaInstallPrompt";
 
 // ----------------------------------------------------------------------
 
@@ -25,17 +28,20 @@ import { Toaster } from "@/components/ui/sonner";
 const App: React.FC = (): JSX.Element => {
   return (
     <HelmetProvider>
-      <ThemeContextProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <SessionProvider>
-          <ThemeModeSetting />
-          <QueryClientProvider client={queryClient}>
-            <Router>
-              <Routing />
-            </Router>
-            <Toaster />
-          </QueryClientProvider>
-        </SessionProvider>
-      </ThemeContextProvider>
+      <ReduxProvider store={store}>
+        <ThemeContextProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          <SessionProvider>
+            <ThemeModeSetting />
+            <QueryClientProvider client={queryClient}>
+              <Router>
+                <Routing />
+              </Router>
+              <Toaster />
+              <PWAInstallPrompt />
+            </QueryClientProvider>
+          </SessionProvider>
+        </ThemeContextProvider>
+      </ReduxProvider>
     </HelmetProvider>
   );
 };

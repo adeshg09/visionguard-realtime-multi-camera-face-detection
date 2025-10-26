@@ -1,5 +1,17 @@
+/* Relative Imports */
 import axios, { AxiosInstance } from "axios";
+
+/* Local Imports */
 import { baseUrls } from "@/config/axios.config.js";
+
+// ----------------------------------------------------------------------
+
+/**
+ * Create an Axios client instance for a specific service.
+ *
+ * @param {string} serviceName - The name of the service.
+ * @returns {AxiosInstance} - The Axios client instance.
+ */
 
 export const createApiClient = (serviceName: string): any => {
   const baseURL = baseUrls[serviceName];

@@ -1,5 +1,10 @@
+/* Imports */
 import { Hono } from "hono";
+
+/* Relative Imports */
 import { PrismaClient } from "@prisma/client";
+
+/* Local Imports */
 import { authMiddleware } from "@/middlewares/auth.middleware.js";
 import {
   validateBody,
@@ -8,18 +13,31 @@ import {
 import {
   createCameraSchema,
   paginationSchema,
+  toggleFaceDetectionSchema,
   updateCameraSchema,
+  updateFpsSchema,
 } from "@/validators/camera.validator.js";
 import { createCameraController } from "@/controllers/camera.controller.js";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Route handler that Creates all camera-related routes.
+ *
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @returns {object} - Camera routes with all handlers
+ */
 export const createCameraRoutes = (prisma: PrismaClient) => {
+  /* Routes */
   const cameraRoutes = new Hono();
+
+  /* Controller */
   const cameraController = createCameraController(prisma);
 
-  // All camera routes require authentication
+  /* Apply authentication to all routes */
   cameraRoutes.use("*", authMiddleware);
 
-  // CRUD operations
+  /* Camera CRUD */
   cameraRoutes.post(
     "/create-camera",
     validateBody(createCameraSchema),
@@ -31,16 +49,32 @@ export const createCameraRoutes = (prisma: PrismaClient) => {
     cameraController.getCameras
   );
   cameraRoutes.get("/get-camera-by-id/:id", cameraController.getCameraById);
-  cameraRoutes.put(
+  cameraRoutes.patch(
     "/update-camera/:id",
     validateBody(updateCameraSchema),
     cameraController.updateCamera
   );
   cameraRoutes.delete("/delete-camera/:id", cameraController.deleteCamera);
 
-  // Stream control
+  /* Camera stream control */
   cameraRoutes.post("/start-stream/:id", cameraController.startStream);
   cameraRoutes.post("/stop-stream/:id", cameraController.stopStream);
 
+  /* Stream status */
+  cameraRoutes.get("/get-stream-status/:id", cameraController.getStreamStatus);
+
+  /* Face detection & fps */
+  cameraRoutes.post(
+    "/toggle-face-detection/:id",
+    validateBody(toggleFaceDetectionSchema),
+    cameraController.toggleFaceDetection
+  );
+  cameraRoutes.post(
+    "/update-fps/:id",
+    validateBody(updateFpsSchema),
+    cameraController.updateFps
+  );
+
+  /* Return camera routes */
   return cameraRoutes;
 };

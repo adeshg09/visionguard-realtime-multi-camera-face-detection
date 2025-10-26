@@ -1,10 +1,21 @@
+/* Imports */
 import type { MiddlewareHandler } from "hono";
+
+/* Local Imports */
 import { envConfig } from "@/config/env.config.js";
 import { RESPONSE_MESSAGES, STATUS_CODES } from "@/constants/index.js";
 import { logger } from "@/libs/logger.lib.js";
 import { errorResponse } from "@/utils/response.js";
 import { verifyToken } from "@/utils/tokens.js";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Authentication middleware to protect routes.
+ * @param {MiddlewareHandler} c - Hono context
+ * @param {Function} next - Next middleware function
+ * @return {Promise<void>} - Resolves when middleware processing is complete
+ */
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   try {
     // Worker authentication

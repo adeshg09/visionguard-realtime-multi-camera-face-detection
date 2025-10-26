@@ -6,7 +6,7 @@ import type { ApiResponse } from "@/models";
 // ----------------------------------------------------------------------
 
 /* Interface */
-interface LoginApiRequest {
+export interface LoginApiRequest {
   username: string;
   password: string;
   rememberMe: boolean;
@@ -17,6 +17,6 @@ export const loginRequest = (
   reqData: LoginApiRequest
 ): Promise<ApiResponse> => {
   return axiosConfig
-    .post(AUTH_ENDPOINTS.Login, reqData)
+    .post(AUTH_ENDPOINTS.LOGIN, reqData)
     .then((response) => response.data);
 };

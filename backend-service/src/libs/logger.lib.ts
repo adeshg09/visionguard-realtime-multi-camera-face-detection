@@ -1,7 +1,17 @@
+/* Relative Imports */
 import winston from "winston";
 
+// ----------------------------------------------------------------------
+
+/* Constants */
 const isProduction = process.env.NODE_ENV === "production";
 
+// ----------------------------------------------------------------------
+
+/**
+ * Logger instance using Winston.
+ *
+ */
 export const logger = winston.createLogger({
   level: isProduction ? "info" : "debug",
   format: winston.format.combine(
@@ -12,6 +22,8 @@ export const logger = winston.createLogger({
   defaultMeta: { service: "visionguard-backend" },
   transports: [new winston.transports.Console()],
 });
+
+// ----------------------------------------------------------------------
 
 // Add file transports only in production
 if (isProduction) {
