@@ -36,18 +36,20 @@ func (fp *FrameProcessor) ProcessFrames() {
 
 	skipRatio := fp.calculateSkipRatio()
 
-	logger.Infof("FPS control: %d/%d fps → skip ratio: %d (process every %d frames)",
+	logger.Infof("📊 FPS control: %d/%d fps → skip ratio: %d (process every %d frames)",
 		fp.session.targetFPS, fp.session.detectedMaxFPS, skipRatio, skipRatio)
 
 	for {
 		select {
 		case <-fp.session.Stop:
 			logger.Infof("Frame processing stopped for camera %s", fp.session.CameraID)
+			fp.logFinalMetrics()
 			return
 
 		default:
 			if err := fp.processSingleFrame(frameBuffer, &consecutiveErrors, &frameCounter, skipRatio); err != nil {
 				if err == io.EOF {
+					fp.logFinalMetrics()
 					return
 				}
 				continue
@@ -68,6 +70,9 @@ func (fp *FrameProcessor) calculateSkipRatio() int {
 }
 
 func (fp *FrameProcessor) processSingleFrame(frameBuffer []byte, consecutiveErrors *int, frameCounter *int, skipRatio int) error {
+	// Increment total frames received
+	fp.session.IncrementFramesReceived()
+
 	n, err := io.ReadFull(fp.session.inputFFmpeg.stdoutPipe, frameBuffer)
 	if err != nil {
 		return fp.handleReadError(err, consecutiveErrors)
@@ -82,7 +87,18 @@ func (fp *FrameProcessor) processSingleFrame(frameBuffer []byte, consecutiveErro
 	// Frame skipping based on FPS
 	*frameCounter++
 	if *frameCounter%skipRatio != 0 {
+		// Increment dropped frames
+		fp.session.IncrementFramesDropped()
 		return nil // Skip this frame
+	}
+
+	// Increment processed frames
+	fp.session.IncrementFramesProcessed()
+
+	// Log metrics every 10 seconds
+	if time.Since(fp.session.lastMetricsLog) >= 10*time.Second {
+		fp.logFrameMetrics()
+		fp.session.lastMetricsLog = time.Now()
 	}
 
 	return fp.processFrameData(frameBuffer)
@@ -176,4 +192,56 @@ func (fp *FrameProcessor) handleReadError(err error, consecutiveErrors *int) err
 	}
 
 	return err
+}
+
+// NEW: Log frame metrics
+func (fp *FrameProcessor) logFrameMetrics() {
+	logger := utils.GetLogger()
+
+	received, processed, dropped := fp.session.GetFrameMetrics()
+
+	dropRate := float64(0)
+	if received > 0 {
+		dropRate = float64(dropped) / float64(received) * 100
+	}
+
+	processRate := float64(0)
+	if received > 0 {
+		processRate = float64(processed) / float64(received) * 100
+	}
+
+	logger.Infof("📊 [Metrics] Camera %s: Received=%d, Processed=%d (%.1f%%), Dropped=%d (%.1f%%)",
+		fp.session.CameraID,
+		received,
+		processed,
+		processRate,
+		dropped,
+		dropRate)
+}
+
+// Log final metrics on stop
+func (fp *FrameProcessor) logFinalMetrics() {
+	logger := utils.GetLogger()
+
+	received, processed, dropped := fp.session.GetFrameMetrics()
+	uptime := fp.session.GetUptime()
+
+	dropRate := float64(0)
+	if received > 0 {
+		dropRate = float64(dropped) / float64(received) * 100
+	}
+
+	avgFPS := float64(0)
+	if uptime.Seconds() > 0 {
+		avgFPS = float64(processed) / uptime.Seconds()
+	}
+
+	logger.Infof("📊 [Final Metrics] Camera %s: Total Received=%d, Processed=%d, Dropped=%d (%.1f%%), Avg FPS=%.2f, Uptime=%v",
+		fp.session.CameraID,
+		received,
+		processed,
+		dropped,
+		dropRate,
+		avgFPS,
+		uptime.Round(time.Second))
 }

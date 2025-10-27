@@ -57,16 +57,39 @@ func (sm *StreamManager) StopStream(cameraID string) (*models.StopStreamResponse
 	return &models.StopStreamResponse{CameraID: cameraID}, nil
 }
 
+// validateStreamStart checks if a new stream can be started
 func (sm *StreamManager) validateStreamStart(cameraID string) error {
 	sm.sessionsMutex.RLock()
 	defer sm.sessionsMutex.RUnlock()
 
+	logger := utils.GetLogger()
+
+	// Check if stream already exists for this camera
 	if _, exists := sm.sessions[cameraID]; exists {
 		return fmt.Errorf("stream already active for camera %s", cameraID)
 	}
 
-	if len(sm.sessions) >= sm.maxConcurrentStreams {
-		return fmt.Errorf("maximum concurrent streams (%d) reached", sm.maxConcurrentStreams)
+	// Get current active stream count
+	currentStreams := len(sm.sessions)
+
+	// warning about capacity
+	if currentStreams >= sm.OptimalStreamCapacity {
+		// Calculate how far over optimal capacity
+		overCapacity := currentStreams - sm.OptimalStreamCapacity + 1
+
+		if overCapacity <= 4 {
+			// 5-8 streams: Warning but acceptable
+			logger.Warnf("⚠️ Starting stream for camera %s: %d/%d streams (exceeding optimal capacity by %d)",
+				cameraID, currentStreams+1, sm.OptimalStreamCapacity, overCapacity)
+		} else {
+			// 9+ streams: Critical warning
+			logger.Errorf("🔴 Starting stream for camera %s: %d/%d streams (CRITICALLY OVERLOADED by %d streams - expect performance degradation)",
+				cameraID, currentStreams+1, sm.OptimalStreamCapacity, overCapacity)
+		}
+	} else {
+		// Within optimal capacity
+		logger.Infof("✅ Starting stream for camera %s: %d/%d streams (within optimal capacity)",
+			cameraID, currentStreams+1, sm.OptimalStreamCapacity)
 	}
 
 	return nil
@@ -76,12 +99,19 @@ func (sm *StreamManager) registerSession(session *StreamSession) {
 	sm.sessionsMutex.Lock()
 	sm.sessions[session.CameraID] = session
 	sm.sessionsMutex.Unlock()
+
+	logger := utils.GetLogger()
+	logger.Infof("Session registered for camera %s (total active: %d)", session.CameraID, len(sm.sessions))
 }
 
 func (sm *StreamManager) unregisterSession(cameraID string) {
 	sm.sessionsMutex.Lock()
 	delete(sm.sessions, cameraID)
+	activeCount := len(sm.sessions)
 	sm.sessionsMutex.Unlock()
+
+	logger := utils.GetLogger()
+	logger.Infof("Session unregistered for camera %s (total active: %d)", cameraID, activeCount)
 }
 
 func (sm *StreamManager) getSession(cameraID string) (*StreamSession, error) {
