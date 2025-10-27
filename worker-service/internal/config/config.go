@@ -33,7 +33,7 @@ type Config struct {
 	MediaMTXAPIURL     string
 
 	// Stream processing
-	MaxConcurrentStreams int
+	OptimalStreamCapacity int
 
 	// Face detection
 	FaceDetectionModelPath string
@@ -63,7 +63,7 @@ func LoadConfig() (*Config, error) {
 		MediaMTXWebRTCPort:     getEnvInt("MEDIAMTX_WEBRTC_PORT", 8889),
 		MediaMTXRTMPPort:       getEnvInt("MEDIAMTX_RTMP_PORT", 1935),
 		MediaMTXAPIURL:         getEnvString("MEDIAMTX_API_URL", "http://visionguard-mediamtx:9997"),
-		MaxConcurrentStreams:   getEnvInt("MAX_CONCURRENT_STREAMS", 4),
+		OptimalStreamCapacity:  getEnvInt("OPTIMAL_STREAM_CAPACITY", 4),
 		FaceDetectionModelPath: getEnvString("FACE_DETECTION_MODEL_PATH", "/app/models"),
 		CloudinaryCloudName:    getEnvString("CLOUDINARY_CLOUD_NAME", ""),
 		CloudinaryAPIKey:       getEnvString("CLOUDINARY_API_KEY", ""),
@@ -94,8 +94,8 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("BACKEND_WORKER_API_KEY is required")
 	}
 
-	if c.MaxConcurrentStreams < 1 {
-		return fmt.Errorf("MAX_CONCURRENT_STREAMS must be at least 1")
+	if c.OptimalStreamCapacity < 1 {
+		return fmt.Errorf("OPTIMAL_STREAM_CAPACITY must be at least 1")
 	}
 
 	return nil

@@ -16,11 +16,11 @@ type StreamStatus string
 // ----------------------------------------------------------------------
 
 const (
-	StreamStatusConnecting StreamStatus = "CONNECTING"
-	StreamStatusStreaming  StreamStatus = "STREAMING"
-	StreamStatusReconnect  StreamStatus = "RECONNECT"
-	StreamStatusStopped    StreamStatus = "STOPPED"
-	StreamStatusError      StreamStatus = "ERROR"
+	StreamStatusConnecting   StreamStatus = "CONNECTING"
+	StreamStatusStreaming    StreamStatus = "STREAMING"
+	StreamStatusReconnecting StreamStatus = "RECONNECTING"
+	StreamStatusStopped      StreamStatus = "STOPPED"
+	StreamStatusError        StreamStatus = "ERROR"
 )
 
 // ----------------------------------------------------------------------
@@ -62,25 +62,45 @@ type StreamStatusRequest struct {
 
 // StreamStatusResponse is the response for stream status
 type StreamStatusResponse struct {
-	CameraID  string       `json:"cameraId"`
-	Status    StreamStatus `json:"status"`
-	IsActive  bool         `json:"isActive"`
-	UptimeMs  int64        `json:"uptimeMs"`
-	WebRTCUrl string       `json:"webrtcUrl"`
-	HLSUrl    string       `json:"hlsUrl"`
-	RTSPUrl   string       `json:"rtspUrl"`
-	RTMPUrl   string       `json:"rtmpUrl"`
+	CameraID        string       `json:"cameraId"`
+	Status          StreamStatus `json:"status"`
+	IsActive        bool         `json:"isActive"`
+	UptimeMs        int64        `json:"uptimeMs"`
+	WebRTCUrl       string       `json:"webrtcUrl"`
+	HLSUrl          string       `json:"hlsUrl"`
+	RTSPUrl         string       `json:"rtspUrl"`
+	RTMPUrl         string       `json:"rtmpUrl"`
+	FramesReceived  int64        `json:"framesReceived"`
+	FramesProcessed int64        `json:"framesProcessed"`
+	FramesDropped   int64        `json:"framesDropped"`
+	DropRate        float64      `json:"dropRate"`
+	TargetFPS       int          `json:"targetFPS"`
+	DetectedFPS     int          `json:"detectedFPS"`
+}
+
+// StreamDetail provides detailed information about a single stream
+type StreamDetail struct {
+	CameraID        string  `json:"cameraId"`
+	Status          string  `json:"status"`
+	UptimeSeconds   int64   `json:"uptimeSeconds"`
+	FramesProcessed int64   `json:"framesProcessed"`
+	FramesDropped   int64   `json:"framesDropped"`
+	DropRate        float64 `json:"dropRate"`
+	TargetFPS       int     `json:"targetFPS"`
 }
 
 // HealthCheckResponse is the response for health check
 type HealthCheckResponse struct {
-	Status               string                  `json:"status"`
-	Timestamp            string                  `json:"timestamp"`
-	Service              string                  `json:"service"`
-	Version              string                  `json:"version"`
-	ActiveStreams        int                     `json:"activeStreams"`
-	MaxConcurrentStreams int                     `json:"maxConcurrentStreams"`
-	StreamSessions       map[string]StreamStatus `json:"streamSessions"`
+	Status                string                  `json:"status"`
+	Timestamp             string                  `json:"timestamp"`
+	Service               string                  `json:"service"`
+	Version               string                  `json:"version"`
+	ActiveStreams         int                     `json:"activeStreams"`
+	OptimalStreamCapacity int                     `json:"OptimalStreamCapacity"`
+	CapacityStatus        string                  `json:"capacityStatus"`
+	UtilizationPercent    float64                 `json:"utilizationPercent"`
+	StreamSessions        map[string]StreamStatus `json:"streamSessions"`
+	StreamDetails         []StreamDetail          `json:"streamDetails"`
 }
 
 // ToggleFaceDetectionRequest is the request payload for toggling face detection
