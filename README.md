@@ -304,29 +304,7 @@ Interactive Swagger API documentation, complete Docker Compose setup, comprehens
 
 </div>
 
----
 
-## 📦 Prerequisites
-
-Before you begin, ensure you have:
-
-- **Docker** `24.0+` with Docker Compose V2
-- **Node.js** `20+` (for local development)
-- **Go** `1.23+` (for worker development)
-- **PostgreSQL** `16+` (optional, if not using Docker)
-
-### External Services
-
-1. **Cloudinary Account** (Required for snapshots)
-
-   - Sign up at [cloudinary.com](https://cloudinary.com)
-   - Get your Cloud Name, API Key, and API Secret
-
-2. **RTSP Camera** (For testing)
-   - Use real IP camera
-   - Or test with [MediaMTX RTSP simulator](https://github.com/bluenviron/mediamtx)
-
----
 
 ## 🚀 Quick Start
 
@@ -347,7 +325,7 @@ Before you begin, ensure you have:
    - Get your Cloud Name, API Key, and API Secret
 
 2. **RTSP Camera** (For testing)
-   - Use real IP camera
+   - Install an IP-webcam app on your phone or use a dedicated IP camera
    - Or test with [MediaMTX RTSP simulator](https://github.com/bluenviron/mediamtx)
 
 ### Docker Setup (Recommended)
