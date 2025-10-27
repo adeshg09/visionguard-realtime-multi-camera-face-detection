@@ -4,6 +4,7 @@ package services
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"sync"
 	"time"
@@ -17,11 +18,16 @@ import (
 // ----------------------------------------------------------------------
 
 const (
-	maxReconnectAttempts = 5
+	maxReconnectAttempts = 10
 	maxConsecutiveErrors = 10
 	connectionTimeout    = 2 * time.Second
 	stopTimeout          = 5 * time.Second
 	defaultBytesPerPixel = 3 // BGR24
+
+	// Exponential backoff configuration
+	baseRetryDelay = 1 * time.Second
+	maxRetryDelay  = 60 * time.Second // Cap at 1 minute
+	jitterPercent  = 20               // ±20% random jitter
 )
 
 // ----------------------------------------------------------------------
@@ -30,7 +36,7 @@ type StreamManager struct {
 	sessions               map[string]*StreamSession
 	sessionsMutex          sync.RWMutex
 	config                 *config.Config
-	maxConcurrentStreams   int
+	OptimalStreamCapacity  int
 	mediamtxClient         *MediaMTXClient
 	faceDetectionModelPath string
 	alertService           *AlertService
@@ -47,10 +53,13 @@ type StartStreamResponse struct {
 }
 
 func NewStreamManager(cfg *config.Config, mediamtxClient *MediaMTXClient, alertService *AlertService) *StreamManager {
+	// Seed random for jitter
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	sm := &StreamManager{
 		sessions:               make(map[string]*StreamSession),
 		config:                 cfg,
-		maxConcurrentStreams:   cfg.MaxConcurrentStreams,
+		OptimalStreamCapacity:  cfg.OptimalStreamCapacity,
 		mediamtxClient:         mediamtxClient,
 		faceDetectionModelPath: findFaceDetectionModel(),
 		alertService:           alertService,
@@ -85,6 +94,31 @@ func findFaceDetectionModel() string {
 	return ""
 }
 
+// Calculate exponential backoff with cap and jitter
+func calculateBackoff(attempt int) time.Duration {
+	// Exponential: 1s, 2s, 4s, 8s, 16s, 32s, 60s (capped)
+	delay := baseRetryDelay * time.Duration(1<<uint(attempt))
+
+	// Cap at maximum delay
+	if delay > maxRetryDelay {
+		delay = maxRetryDelay
+	}
+
+	// Add random jitter (±20%)
+	jitterRange := float64(delay) * float64(jitterPercent) / 100.0
+	jitter := time.Duration(rand.Float64()*jitterRange*2 - jitterRange)
+
+	finalDelay := delay + jitter
+
+	// Ensure minimum delay of 1 second
+	if finalDelay < time.Second {
+		finalDelay = time.Second
+	}
+
+	return finalDelay
+}
+
+// reconnection with exponential backoff
 func (sm *StreamManager) runStreamSession(session *StreamSession) {
 	logger := utils.GetLogger()
 	defer func() { session.Done <- true }()
@@ -100,25 +134,35 @@ func (sm *StreamManager) runStreamSession(session *StreamSession) {
 
 		default:
 			if session.Status != models.StreamStatusStreaming {
+				// Set reconnecting status
+				if reconnectAttempts > 0 {
+					session.Status = models.StreamStatusReconnecting
+				}
+
 				if err := sm.connectAndStream(session); err != nil {
 					reconnectAttempts++
-					logger.Warnf("Connection failed for camera %s (attempt %d): %v",
-						session.CameraID, reconnectAttempts, err)
+
+					// Calculate exponential backoff
+					backoff := calculateBackoff(reconnectAttempts)
+
+					logger.Warnf("🔄 Connection failed for camera %s (attempt %d/%d): %v - retrying in %v",
+						session.CameraID, reconnectAttempts, maxReconnectAttempts, err, backoff)
 
 					if reconnectAttempts >= maxReconnectAttempts {
-						logger.Errorf("Max reconnect attempts reached for camera %s", session.CameraID)
+						logger.Errorf("❌ Max reconnect attempts reached for camera %s", session.CameraID)
 						session.Status = models.StreamStatusError
 						return
 					}
 
-					backoff := time.Duration(reconnectAttempts) * time.Second
+					// Sleep with exponential backoff
 					time.Sleep(backoff)
 					continue
 				}
 
+				// Reset on successful connection
 				reconnectAttempts = 0
 				session.Status = models.StreamStatusStreaming
-				logger.Infof("Camera %s connected successfully", session.CameraID)
+				logger.Infof("✅ Camera %s connected successfully", session.CameraID)
 
 				// Start frame processing
 				frameProcessor := NewFrameProcessor(session)
@@ -175,7 +219,7 @@ func (sm *StreamManager) createStreamSession(req *models.StartStreamRequest) (*S
 	utils.GetLogger().Infof("Face detection for camera %s: %v (model exists: %v)",
 		req.Name, faceDetectionEnabled, len(sm.faceDetectionModelPath) > 0)
 
-	// Create session
+	// Create session with frame metrics
 	session := &StreamSession{
 		CameraID: req.CameraID,
 		Camera: &models.Camera{
@@ -198,8 +242,14 @@ func (sm *StreamManager) createStreamSession(req *models.StartStreamRequest) (*S
 		overlay:              NewOverlayRenderer(req.CameraID),
 		faceDetectionEnabled: faceDetectionEnabled,
 		alertService:         sm.alertService,
-		alertCooldown:        5 * time.Second, // 5 seconds between alerts
+		alertCooldown:        5 * time.Second,
 		lastAlertTime:        time.Time{},
+
+		// Initialize frame metrics
+		totalFramesReceived:  0,
+		totalFramesProcessed: 0,
+		totalFramesDropped:   0,
+		lastMetricsLog:       time.Now(),
 	}
 
 	// Initialize face detection if available

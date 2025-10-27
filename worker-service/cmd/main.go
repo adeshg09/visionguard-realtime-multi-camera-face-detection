@@ -36,8 +36,8 @@ func main() {
 	logger := utils.GetLogger()
 
 	logger.Info("🚀 VisionGuard Worker Service starting...")
-	logger.Infof("Port: %d | Gin Mode: %s | Max Streams: %d",
-		cfg.Port, cfg.GinMode, cfg.MaxConcurrentStreams)
+	logger.Infof("📊 Configuration: Port=%d | Gin Mode=%s | Optimal Stream Capacity=%d",
+		cfg.Port, cfg.GinMode, cfg.OptimalStreamCapacity)
 
 	// ----------------------------------------------------------------------
 
@@ -55,9 +55,9 @@ func main() {
 
 	// Check MediaMTX connectivity
 	if healthy, msg := mediamtxClient.IsHealthy(); !healthy {
-		logger.Warnf("MediaMTX not healthy: %s", msg)
+		logger.Warnf("⚠️ MediaMTX not healthy: %s", msg)
 	} else {
-		logger.Info("MediaMTX connectivity verified")
+		logger.Info("✅ MediaMTX connectivity verified")
 	}
 
 	// ----------------------------------------------------------------------
@@ -75,7 +75,8 @@ func main() {
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Port)
-	logger.Infof("Server listening on %s", addr)
+	logger.Infof("🌐 Server listening on %s", addr)
+	logger.Infof("📡 Ready to accept camera stream requests")
 
 	if err := server.Run(addr); err != nil {
 		logger.Fatalf("Failed to start server: %v", err)
@@ -120,19 +121,21 @@ func setupGracefulShutdown(server *gin.Engine, streamManager *services.StreamMan
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
 
-		logger.Info("Shutdown signal received, closing streams...")
+		logger.Info("🛑 Shutdown signal received, closing streams...")
 
 		// Stop all active streams
 		streams := streamManager.GetAllStreams()
+		stoppedCount := 0
 		for cameraID := range streams {
 			if _, err := streamManager.StopStream(cameraID); err != nil {
-				logger.Errorf("Error stopping stream %s: %v", cameraID, err)
+				logger.Errorf("❌ Error stopping stream %s: %v", cameraID, err)
 			} else {
-				logger.Infof("Stopped stream: %s", cameraID)
+				stoppedCount++
+				logger.Infof("✅ Stopped stream: %s", cameraID)
 			}
 		}
 
-		logger.Info("All streams stopped. Exiting...")
+		logger.Infof("✅ All streams stopped (%d total). Exiting...", stoppedCount)
 		os.Exit(0)
 	}()
 }
