@@ -16,7 +16,7 @@
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.8-5C3EE8?logo=opencv)](https://opencv.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
 
-[📹 Watch Demo](#-demo--screenshots) • [🚀 Quick Start](#🚀-quick-start) • [📖 API Docs](#📡-api-reference) • [💬 Support](#-support)
+[📹 Watch Demo](#🎥-video-walkthrough) • [🚀 Quick Start](#🚀-quick-start) • [📖 API Docs](#📡-api-reference) • [💬 Support](#-support)
 
 ![Welcome Preview](./docs/screenshots/welcome-web.png)
 ![Dashboard Preview](./docs/screenshots/dashboard-web.png)
@@ -69,9 +69,9 @@ VisionGuard is a real-time surveillance system that transforms IP cameras into i
 
 ### 🎥 Video Walkthrough
 
-[![Video Walkthrough](https://via.placeholder.com/800x450/1a1a1a/00D9FF?text=▶+Click+to+Watch+Demo)](https://youtu.be/your-video-link)
+**[Click here to watch the complete 20-minute demonstration](https://youtu.be/daHCNpMVsjw)**
 
-**[⬇️ Download Full Video](link-to-video.mp4)** | **Duration:** 8 minutes
+_Covers: System architecture, live demos, face detection in action, code walkthrough, and future improvements_
 
 ---
 
