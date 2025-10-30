@@ -59,7 +59,7 @@ VisionGuard is a real-time surveillance system that transforms IP cameras into i
 ### 🎬 Demo Credentials
 
 - Username: `admin`
-- Password: `admin@123`
+- Password: `admin123`
 
 ---
 
